@@ -108,9 +108,10 @@
       <main class="wrap">
         <h1 class="h1">Proyectos</h1>
         <p class="lead">Mide, cotiza y entrega el plano desde el celular.</p>
-        <div class="btns two" style="margin-bottom:16px">
-          <button class="btn" data-a="new">Nuevo proyecto</button>
-          <label class="btn sec" style="position:relative;overflow:hidden">Importar proyecto<input type="file" accept=".json,application/json" data-a="import" style="position:absolute;inset:0;opacity:0;font-size:16px"></label>
+        <div class="home-tools" style="margin-bottom:14px">
+          <label class="field project-search"><span class="sr-only">Filtrar proyectos</span><input id="projectFilter" type="search" placeholder="⌕  Buscar proyectos" aria-label="Buscar proyectos"></label>
+          <button class="iconbtn tool-plus" data-a="new" aria-label="Crear nuevo proyecto" title="Nuevo proyecto">+</button>
+          <label class="iconbtn tool-upload" title="Importar proyecto" aria-label="Importar proyecto">⇧<input type="file" accept=".json,application/json" data-a="import"></label>
         </div>
         ${St.usingMemory() ? '<p class="warn">Este navegador no permite guardar en el dispositivo (modo privado). Los proyectos se perderán al cerrar.</p>' : ''}
         <div class="plist">
@@ -121,6 +122,7 @@
     $('[data-a="new"]').onclick = async () => { const p = Mo.defaultProject(); await St.saveProject(p); location.hash = '#/p/' + p.id + '/datos'; };
     const dm = $('[data-a="demo"]'); if (dm) dm.onclick = loadDemo;
     $('[data-a="import"]').onchange = importProject;
+    $('#projectFilter').oninput = e => { const q=e.target.value.toLowerCase().trim(); $$('.pitem').forEach(a=>a.style.display=(a.textContent.toLowerCase().includes(q)?'':'none')); };
   }
   async function loadDemo() {
     toast('Cargando ejemplo…');
@@ -155,12 +157,42 @@
     document.title = (p.address || 'Proyecto') + ' · Gorilla Screens';
     const q = Mo.quoteTotals(p);
     app.innerHTML = topbar(p.address || 'Proyecto nuevo', (p.client.name || 'Sin cliente') + ' · ' + q.sqft.toFixed(1) + ' pie²', `<a class="iconbtn" href="#/" aria-label="Volver a proyectos">${IC.back}</a>`) +
-      `<nav class="tabbar" aria-label="Secciones del proyecto">${TABS.map(([k, l]) => `<a href="#/p/${esc(p.id)}/${k}" ${k === tab ? 'aria-current="page"' : ''}>${IC[k]}<span>${l}</span></a>`).join('')}</nav>
+      `<nav class="tabbar" aria-label="Secciones del proyecto">${TABS.map(([k, l]) => `<a href="#/p/${esc(p.id)}/${k}" ${(['editor','roof','parts'].includes(tab) ? k === 'medidas' : k === tab) ? 'aria-current="page"' : ''}>${IC[k]}<span>${l}</span></a>`).join('')}</nav>
        <main class="wrap" id="tab"></main>`;
     const el = $('#tab');
+    if (tab === 'editor') { return tabEditor(el); }
+    if (tab === 'roof') { return tabRoof(el); }
+    if (tab === 'parts') { return tabParts(el); }
     ({ datos: tabDatos, fotos: tabFotos, medidas: tabMedidas, '3d': tab3D, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
     window.scrollTo(0, 0);
   }
+  function tabEditor(el) {
+    if (!window.GSSPhotoEditor) { el.innerHTML='<div class="card">Editor no disponible.</div>'; return; }
+    el.classList.add('draft-page');
+    window.GSSPhotoEditor.editor({
+      project:S.project, photos:S.photos, host:el,
+      goBack:()=>location.hash='#/p/'+S.project.id+'/medidas',
+      save:()=>{ saveSoon(); },
+      approved:(revision)=>{ S.builtFor=''; toast('Plano aprobado: revisión '+revision); location.hash='#/p/'+S.project.id+'/3d'; }
+    });
+  }
+
+  function tabParts(el) {
+    if (!window.GSSManufacturer) { el.innerHTML='<div class="card">Catálogo no disponible.</div>';return; }
+    window.GSSManufacturer.render({ project:S.project,host:el,save:saveSoon,
+      back:()=>location.hash='#/p/'+S.project.id+'/medidas' });
+  }
+
+  function tabRoof(el) {
+    if (!window.GSSRoofEditor) { el.innerHTML='<div class="card">Editor de techo no disponible.</div>'; return; }
+    el.classList.add('draft-page');
+    window.GSSRoofEditor.editor({ project:S.project, photos:S.photos, host:el,
+      goBack:()=>location.hash='#/p/'+S.project.id+'/medidas',
+      save:()=>saveSoon(),
+      approved:(revision)=>{S.builtFor=''; toast('Techo aprobado · Revisión '+revision); location.hash='#/p/'+S.project.id+'/3d';}
+    });
+  }
+
   function refreshHeader() { const q = Mo.quoteTotals(S.project); const t = $('.topbar .t'); if (t) t.innerHTML = `<b>${esc(S.project.address || 'Proyecto nuevo')}</b><span>${esc(S.project.client.name || 'Sin cliente')} · ${q.sqft.toFixed(1)} pie²</span>`; }
 
   function mapLinks(p) {
@@ -176,11 +208,10 @@
     const p = S.project, m = mapLinks(p);
     el.innerHTML = `
       <div class="card">
-        <div class="field"><label for="addr">Dirección del proyecto</label><input id="addr" autocomplete="street-address" value="${esc(p.address)}" placeholder="22743 SW 56th Ave, Boca Raton, FL 33433"></div>
-        <button class="btn sec block" data-a="geo">Buscar en el mapa</button>
+        <div class="field"><label for="addr">Dirección del proyecto</label><div class="address-inline"><input id="addr" autocomplete="street-address" value="${esc(p.address)}" placeholder="Dirección del proyecto"><button class="iconbtn search-inside" data-a="geo" title="Buscar ubicación" aria-label="Buscar ubicación">⌕</button></div></div>
         ${p.address ? `<div class="mapbox"><iframe title="Vista satelital" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="${esc(m.embed)}"></iframe></div>
-        <div class="btns two"><a class="btn sec" href="${esc(m.sat)}" target="_blank" rel="noopener">Abrir vista aérea</a><a class="btn sec" href="${esc(m.street)}" target="_blank" rel="noopener">Abrir Street View</a></div>
-        <p class="lead" style="margin:10px 0 0">Toma captura de la vista aérea y de Street View y súbelas en Fotos.</p>` : ''}
+        <div class="location-actions"><div class="seg" aria-label="Tipo de mapa"><button data-mapmode="sat" aria-pressed="true">Aérea</button><button data-mapmode="street" aria-pressed="false">Calle</button></div><a class="btn sec map-open" href="${esc(m.sat)}" target="_blank" rel="noopener" id="openSelectedMap">↗ Abrir vista</a></div>
+        <p class="lead smalltext" style="margin:8px 0 0">La vista aérea puede agregarse a Fotos si cuentas con una imagen autorizada. Esta app no captura ni almacena automáticamente Google Maps.</p>` : ''}
       </div>
       <div class="card">
         <p class="cap">Cliente</p>
@@ -193,6 +224,7 @@
         <div class="field"><label for="nt">Notas internas</label><textarea id="nt">${esc(p.notes)}</textarea></div>
         <button class="btn danger block" data-a="del">Borrar proyecto</button>
       </div>`;
+    $$('[data-mapmode]',el).forEach(b => b.onclick=()=>{ $$('[data-mapmode]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b))); const url=b.dataset.mapmode==='street'?m.street:m.sat; const target=$('#openSelectedMap',el); if(target)target.href=url; });
     $('#addr').oninput = e => { p.address = e.target.value; p.geo = null; saveSoon(); refreshHeader(); };
     $('#addr').onchange = () => tabDatos(el);
     $$('[data-c]').forEach(i => i.oninput = () => { p.client[i.dataset.c] = i.value; saveSoon(); refreshHeader(); });
@@ -217,7 +249,7 @@
         <div class="row" style="min-height:0"><b id="h-${k}" style="font-size:16px">${l}</b><span class="sub">${by(k).length || ''}</span></div>
         <p class="lead" style="margin:4px 0 0;font-size:14px">${h}</p>
         <div class="photos">
-          ${by(k).map(x => `<div class="ph"><button style="all:unset;display:block;width:100%;height:100%;cursor:pointer" data-open="${x.id}" aria-label="Ver foto"><img src="${x.url}" alt="${esc(l)}"></button><button class="x" data-del="${x.id}" aria-label="Borrar foto">×</button></div>`).join('')}
+          ${by(k).map(x => `<div class="ph"><button style="all:unset;display:block;width:100%;height:100%;cursor:pointer" data-open="${x.id}" aria-label="Ver foto"><img src="${x.url}" alt="${esc(l)}"></button><button class="x" data-del="${x.id}" aria-label="Borrar foto">×</button>${!['aerea','street','render'].includes(k)?`<button class="trace-photo" data-trace="${x.id}" title="Dibujar sobre esta foto">✎ Plano</button>`:''}</div>`).join('')}
           <label class="addph" aria-label="Agregar foto a ${esc(l)}">+<input type="file" accept="image/*" multiple data-cat="${k}"></label>
         </div>
       </section>`).join('');
@@ -227,6 +259,7 @@
       await loadPhotos(); tabFotos(el);
     });
     $$('[data-del]', el).forEach(b => b.onclick = async () => { await St.deletePhoto(b.dataset.del); await loadPhotos(); tabFotos(el); });
+    $$('[data-trace]',el).forEach(b=>b.onclick=()=>{window.GSSPhotoEditor.initDraft(S.project).sourcePhotoId=b.dataset.trace;saveSoon();location.hash='#/p/'+S.project.id+'/editor';});
     $$('[data-open]', el).forEach(b => b.onclick = () => { const x = S.photos.find(y => y.id === b.dataset.open); const o = document.createElement('div'); o.className = 'overlay'; o.innerHTML = `<img src="${x.url}" alt=""><button aria-label="Cerrar">×</button>`; o.onclick = () => o.remove(); document.body.appendChild(o); });
   }
 
@@ -237,6 +270,9 @@
     const p = S.project, a = Mo.areas(p), L = Mo.layout(p);
     const sw = (id, on, label) => `<div class="row"><span class="l">${label}</span><button class="sw" id="${id}" aria-pressed="${on}" aria-label="${esc(label)}"></button></div>`;
     el.innerHTML = `
+      <div class="card workflow-card"><div class="cap">Roof Frame Plan · Flat / Mansard / Gable</div><div class="row"><span class="l">${p.roofDesign?.status ? '✓ Techo aprobado · Rev. '+p.roofDesign.revision : 'Geometría de techo por revisar'}</span><span class="sub">${p.roofDesign?.style||'flat'} · ${Mo.fmt(p.topScreen.length)} × ${Mo.fmt(p.topScreen.depth)}</span></div><button class="btn block" data-a="roofedit">▱ Editor de techo · perfiles y vigas</button><p class="lead smalltext">Selecciona Flat, Mansard o Gable y mueve vigas directamente en el plano táctil. Mansard requiere dimensiones suficientes.</p></div>
+      <div class="card workflow-card"><div class="row"><span class="l"><b>Biblioteca de construcción</b><br><span class="sub">Perfiles reales, clips, puerta y montaje · Screen Tight / EZ Screen</span></span><a class="iconbtn" href="#/p/${p.id}/parts" aria-label="Abrir catálogo técnico" title="Catálogo técnico">⌁</a></div><a class="btn sec block" href="#/p/${p.id}/parts" style="text-decoration:none">Consultar materiales y detalles técnicos</a></div>
+      <div class="card workflow-card"><div class="cap">Dibujo paramétrico desde fotografía</div><div class="row"><span class="l">${p.approvedDrawing?.revision ? '✓ Plano aprobado · Rev. '+p.approvedDrawing.revision : 'Borrador · pendiente de revisión'}</span><span class="sub">${p.drawingDraft?.items?.length||0} openings en el dibujo</span></div><button class="btn block" data-a="draw">✎ Abrir editor 2D</button><p class="lead smalltext">Superpone perfiles y cotas sobre tus fotos. Aprobar una revisión actualiza este listado y el modelo 3D.</p></div>
       <div class="card"><div class="row" style="min-height:0"><span class="l">Área total de screen</span><span class="big">${a.total.toFixed(1)} pie²</span></div>${L.warn.map(w => `<p class="warn">${esc(w)}</p>`).join('')}</div>
       <div class="card"><p class="cap">Openings</p>
         ${p.openings.map((o, i) => `<div class="opening">
@@ -274,6 +310,8 @@
         <div class="field"><label>Ventana del porche, ancho</label>${ftin('fww', p.house.frontWindowW)}</div>
         ${sw('ev', p.house.evCharger, 'Cargador eléctrico en la pared')}
       </div>`;
+    $('[data-a="draw"]',el).onclick=()=>location.hash='#/p/'+p.id+'/editor';
+    $('[data-a="roofedit"]',el).onclick=()=>location.hash='#/p/'+p.id+'/roof';
     const recalc = () => {
       p.openings.forEach((o, i) => { o.w = Math.max(1, readFtin('ow' + i)); o.h = Math.max(o.w / 2 + 0.5, readFtin('oh' + i)); });
       p.pier = readFtin('pier'); p.house.porchW = Math.max(4, readFtin('pw')); p.house.porchDepth = Math.max(2, readFtin('pd')); p.house.archWallH = Math.max(6, readFtin('awh'));
@@ -318,6 +356,7 @@
         <div class="row"><span class="l">Landscaping</span><button class="sw" id="tl" aria-pressed="${S.land}" aria-label="Landscaping"></button></div>
         <div class="row"><span class="l">Palmas del frente</span><button class="sw" id="tp" aria-pressed="${S.palms}" aria-label="Palmas"></button></div>
       </div>
+      <a class="btn sec block" href="#/p/${S.project.id}/roof" style="text-decoration:none">▱ Editar plano de techo · Flat / Mansard</a>
       <button class="btn sec block" data-a="shot">Guardar captura de esta vista</button>`;
     wireViewer(el);
     $('#tl', el).onclick = e => { S.land = !S.land; e.currentTarget.setAttribute('aria-pressed', S.land); S.viewer.setLandscape(S.land); };
@@ -372,7 +411,7 @@
       const shots = { persp: v.snapshot(big[0], big[1], 'izq', 'image/jpeg', { after: true }), front: v.snapshot(1200, 740, 'frente', 'image/jpeg', { after: true }), porch: v.snapshot(1200, 740, 'porche', 'image/jpeg', { after: true }), top: v.snapshot(1200, 740, 'top', 'image/jpeg', { after: true }), before3d: v.snapshot(1600, 920, 'frente', 'image/jpeg', { after: false }) };
       const pick = ['frente', 'render', 'street', 'aerea'], photos = [];
       for (const c of pick) { const ph = S.photos.find(x => x.cat === c); if (ph && photos.length < 2) photos.push({ label: { frente: 'Existing condition (photo)', render: 'Proposed (render)', street: 'Street view', aerea: 'Aerial view' }[c], url: await blobToDataURL(ph.blob) }); }
-      const blob = await window.GSSPlan(S.project, Object.assign({ logo: await logoData(), company: company(), photos }, shots));
+      const aerial=S.photos.find(x=>x.cat==='aerea'); const blob = await window.GSSPlan(S.project, Object.assign({ logo: await logoData(), company: company(), photos, aerial:aerial?await blobToDataURL(aerial.blob):null }, shots));
       await saveBlob('Plano-Screens-' + slug(S.project.address) + '.pdf', blob); toast('Plano listo');
     } catch (e) { console.error(e); toast('No se pudo generar el plano'); }
     busy(el, false);
@@ -382,7 +421,7 @@
     const p = S.project;
     el.innerHTML = `
       <div class="card"><p class="cap">Para el ingeniero</p>
-        <p class="lead" style="font-size:14px">Plano de 3 hojas: elevación, planta del porche, top screen, detalles, área en pie², notas y vistas 3D. Rojo = trabajo nuevo.</p>
+        <p class="lead" style="font-size:14px">Plano arquitectónico 11 × 17: portada, ubicación, vista aérea (si fue agregada), elevación, planta, detalles y fotos. Sin líneas rojas; trabajo nuevo en bronce oscuro.</p>
         <button class="btn block" data-a="plan">Descargar plano PDF</button></div>
       <div class="card"><p class="cap">Para el cliente</p>
         <button class="btn sec block" data-a="quote">Descargar cotización PDF</button>

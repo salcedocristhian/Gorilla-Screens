@@ -104,7 +104,7 @@
 
       const H = P.house, LW = H.leftWingW, PW = H.porchW, GW = H.garageW, D = H.porchDepth, AWH = H.archWallH;
       const PZ = -(D + 1), BACK = PZ - 27;
-      const fasciaZ = P.topScreen.on ? Math.min(-1.5, Math.max(PZ + 0.5, -(P.topScreen.depth + 0.5))) : Math.max(PZ + 0.5, -3);
+      const fasciaZ = P.topScreen.on ? Math.min(-1.5, Math.max(PZ + 0.5, -(P.topScreen.depth + 0.93))) : Math.max(PZ + 0.5, -3);
       const L = M_.layout(P);
       this.dims = { LW, PW, GW, D, PZ, fasciaZ, cx: (-LW + PW + GW) / 2 };
 
@@ -275,6 +275,26 @@
         const fr = new T.Mesh(new T.ExtrudeGeometry(outer, { depth: FD, bevelEnabled: false, curveSegments: 48 }), M.frame); fr.position.z = SZ; fr.castShadow = true; screens.add(fr);
         const innerFill = o.type === 'arch' ? archShape(o.cx, r - F, spring, F) : rectShape(o.x0 + F, o.x1 - F, F, h - F);
         const mesh = new T.Mesh(new T.ShapeGeometry(innerFill, 48), M.mesh); mesh.position.z = SZ + FD / 2; screens.add(mesh);
+        // Profiles selected in the approved 2D frame plan become individual 3D pieces.
+        (o.segments || []).forEach(seg => {
+          const t = Math.min(.96, Math.max(.04, Number(seg.t) || .5));
+          const inches = Math.max(1, Math.min(4, parseFloat(String(seg.profile || '1x2').split('x')[0]) || 1));
+          const sw = inches / 12;
+          if (seg.direction === 'v') {
+            const xx = o.x0 + o.w * t;
+            const dx = xx - o.cx;
+            const yTop = o.type === 'arch' ? spring + Math.sqrt(Math.max(0, r*r - dx*dx)) : h;
+            if (yTop > F) sBox(xx-sw/2, xx+sw/2, F, yTop, SZ-.015, SZ+FD+.015);
+          } else {
+            const yy = Math.min(h-F, Math.max(F, h * t));
+            let l = o.x0 + F, rr = o.x1 - F;
+            if (o.type === 'arch' && yy > spring) {
+              const half = Math.sqrt(Math.max(0, r*r - (yy-spring)*(yy-spring)));
+              l = o.cx - half + F/3; rr = o.cx + half - F/3;
+            }
+            if (rr > l) sBox(l, rr, yy-sw/2, yy+sw/2, SZ-.015, SZ+FD+.015);
+          }
+        });
         if (o.door) {
           const dh = o.type === 'arch' ? spring : Math.min(h - F, 6.67), z0 = SZ - 0.01, z1 = SZ + FD + 0.03;
           sBox(o.x0 + F, o.x1 - F, dh - F / 2, dh + F / 2, z0, z1);
@@ -283,13 +303,53 @@
           sBox(o.x1 - 0.55, o.x1 - 0.45, Math.min(2.75, dh / 2 + 0.2), Math.min(3.25, dh / 2 + 0.7), z1, z1 + 0.09, M.black);
         }
       });
-      // top screen: horizontal panel between the arch wall and the fascia/gutter
+      // Roof screen — parametric geometry from approved 2D roof drafting.
+      // This is a construction concept, not an engineered structural section.
       if (P.topScreen.on) {
-        const y = AWH + 0.03, za = fasciaZ + (P.gutter.superOn ? 0.68 : 0.35), zb = -0.25, x0 = 0, x1 = PW;
-        const tb = (a, b, c, d, e, f) => sBox(a, b, c, d, e, f);
-        tb(x0, x1, y, y + FD, za, za + F); tb(x0, x1, y, y + FD, zb - F, zb); tb(x0, x0 + F, y, y + FD, za, zb); tb(x1 - F, x1, y, y + FD, za, zb);
-        // one continuous panel: perimeter frame only, no intermediate supports
-        const mg = new T.PlaneGeometry(x1 - x0, zb - za); const mm = new T.Mesh(mg, M.meshTop); mm.rotation.x = -Math.PI / 2; mm.position.set((x0 + x1) / 2, y + FD / 2, (za + zb) / 2); screens.add(mm);
+        const y = AWH + 0.04, x0 = 0, x1 = PW;
+        const za = fasciaZ + (P.gutter.superOn ? 0.68 : 0.35), zb = -0.25;
+        const roof = P.roofDesign?.status === 'approved-conceptual' ? P.roofDesign : {style:'flat',bays:[]};
+        const style = roof.style || 'flat';
+        const inset = Math.max(.08, Math.min(Math.min(PW, zb-za)/2-.04, +roof.inset || 1));
+        const rise = Math.max(0, Math.min(20, +roof.rise || 0));
+        const pts = [];
+        const tri=(a,b,c)=>pts.push(...a,...b,...c);
+        const quad=(a,b,c,d)=>{tri(a,b,c);tri(a,c,d);};
+        const beam=(a,b,width=.115)=>{
+          const va=new T.Vector3(...a), vb=new T.Vector3(...b), vector=vb.clone().sub(va), len=vector.length();
+          if(len<.04)return;
+          const mesh=new T.Mesh(new T.BoxGeometry(width,.095,len),M.frame);
+          mesh.position.copy(va.add(vb).multiplyScalar(.5));
+          mesh.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),vector.normalize());
+          mesh.castShadow=true;screens.add(mesh);
+        };
+        const A=[x0,y,za], B=[x1,y,za], C=[x1,y,zb], Dd=[x0,y,zb];
+        if(style==='mansard' && (zb-za)>2*inset && PW>2*inset){
+          const Ai=[x0+inset,y+rise,za+inset],Bi=[x1-inset,y+rise,za+inset],
+                Ci=[x1-inset,y+rise,zb-inset],Di=[x0+inset,y+rise,zb-inset];
+          quad(A,B,Bi,Ai);quad(B,C,Ci,Bi);quad(C,Dd,Di,Ci);quad(Dd,A,Ai,Di);
+          quad(Ai,Bi,Ci,Di);
+          [A,B,C,Dd].forEach((p,i)=>beam(p,[B,C,Dd,A][i]));
+          [Ai,Bi,Ci,Di].forEach((p,i)=>beam(p,[Bi,Ci,Di,Ai][i]));
+          [[A,Ai],[B,Bi],[C,Ci],[Dd,Di]].forEach(pair=>beam(...pair));
+        } else if(style==='gable' && rise>0){
+          const rm=(za+zb)/2, Ra=[x0,y+rise,rm],Rb=[x1,y+rise,rm];
+          quad(A,B,Rb,Ra);quad(Ra,Rb,C,Dd);
+          [[A,B],[B,C],[C,Dd],[Dd,A],[Ra,Rb],[A,Ra],[B,Rb],[Dd,Ra],[C,Rb]].forEach(pair=>beam(...pair));
+        } else {
+          quad(A,B,C,Dd);
+          [[A,B],[B,C],[C,Dd],[Dd,A]].forEach(pair=>beam(...pair));
+        }
+        const geom=new T.BufferGeometry();
+        geom.setAttribute('position',new T.Float32BufferAttribute(pts,3));geom.computeVertexNormals();
+        const roofMesh=new T.Mesh(geom,M.meshTop);roofMesh.receiveShadow=true;screens.add(roofMesh);
+        // Bay positions are user editable in the roof plan; keep the default 16x2 opening ONE panel.
+        for(const t of (roof.bays||[])){
+          const x=x0+(x1-x0)*Math.max(.03,Math.min(.97,+t||.5));
+          if(style==='gable'&&rise>0){let mid=(za+zb)/2;beam([x,y,za],[x,y+rise,mid]);beam([x,y+rise,mid],[x,y,zb]);}
+          else if(style==='mansard'&&rise>0&&(zb-za)>2*inset){beam([x,y,za],[x,y+rise,za+inset]);beam([x,y+rise,za+inset],[x,y+rise,zb-inset]);beam([x,y+rise,zb-inset],[x,y,zb]);}
+          else beam([x,y,za],[x,y,zb]);
+        }
       }
       this._views();
       this.apply();

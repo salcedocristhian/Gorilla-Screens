@@ -48,3 +48,7 @@ Open `http://localhost:8080`. To publish, place the folder contents at the GitHu
 - `js/plan.js` — architectural sheets / location references
 - `js/app.js` — screens, project navigation and workflows
 - `css/app.css` — touch-oriented responsive UI
+
+
+## V15: Biblioteca de fabricantes
+Medidas → Biblioteca de construcción. Incluye referencias documentadas Screen Tight/EZ Screen, componentes reales, fichas enlazadas, comprobación teórica de la puerta 36×80 respecto al arco, takeoff de perfiles aprobados y checklist guardado en proyecto. No es sistema de ingeniería. Materiales de 7-inch super gutter, carga de viento y techos Mansard mesh siguen sujetos a submittal y EOR.

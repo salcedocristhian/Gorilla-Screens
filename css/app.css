@@ -97,3 +97,83 @@ table.sq tr.tot td{font-weight:700;color:var(--text);border-bottom:0}
 .extra{display:grid;grid-template-columns:1fr 120px 44px;gap:8px;align-items:center;margin-bottom:8px}
 .extra input{min-height:48px;border:1px solid var(--line);border-radius:12px;background:var(--field);padding:8px 10px;width:100%}
 .pad{height:8px}
+
+/* v14 — compact, touch-first workflows */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.home-tools{display:flex;align-items:center;gap:8px}
+.home-tools .project-search{flex:1;margin:0}
+.home-tools .project-search input{height:46px;min-height:46px;background:var(--field);border:1px solid var(--line)}
+.tool-plus{background:var(--accent);color:#fff!important;font-size:28px;font-weight:400;border-radius:50%;width:46px;height:46px}
+.tool-upload{position:relative;background:var(--card);font-size:25px;border:1px solid var(--line);border-radius:50%;width:46px;height:46px;overflow:hidden}
+.tool-upload input{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}
+.address-inline{display:flex;border:1px solid var(--line);border-radius:14px;background:var(--field);overflow:hidden;align-items:center}
+.address-inline input{flex:1;border:0;background:transparent;min-width:0}
+.address-inline .search-inside{flex:none;margin:0 5px 0 0;color:var(--accent);font-size:27px}
+.location-actions{display:flex;gap:10px;align-items:center}.location-actions .seg{flex:1}.location-actions .map-open{min-height:44px;white-space:nowrap}
+.smalltext{font-size:12px!important;line-height:1.45}
+.trace-photo{position:absolute;bottom:5px;left:5px;border:0;border-radius:9px;padding:6px 8px;font-size:11px;font-weight:650;color:#fff;background:rgba(0,0,0,.76);z-index:3}
+.workflow-card .btn{margin:8px 0 10px}
+.workflow-card .row .l{font-weight:600}
+/* Photo-to-plan drafting space, built on source geometry instead of an inert mockup */
+.draft-page{max-width:none;padding:14px 16px 100px}
+.draft-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:0 auto 12px;max-width:1400px}
+.draft-eyebrow{font-size:11px;font-weight:750;letter-spacing:.1em;color:var(--accent)}
+.draft-top h1{margin:2px 0 3px;font-size:23px;letter-spacing:-.025em}
+.draft-sub{color:var(--sub);font-size:12px;line-height:1.4}
+.draft-layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;max-width:1400px;gap:14px;margin:auto;align-items:start}
+.draft-work{background:var(--card);border-radius:20px;padding:12px;min-width:0;overflow:hidden}
+.draft-toolbar{display:flex;align-items:center;gap:6px;overflow:auto;scrollbar-width:none;padding:3px 0 11px}
+.draft-toolbar button{border:1px solid var(--line);background:var(--field);border-radius:12px;min-width:69px;padding:7px 9px;display:flex;flex-direction:column;align-items:center;gap:1px;white-space:nowrap}
+.draft-toolbar button strong{font-size:21px;line-height:25px}.draft-toolbar button span{font-size:10px}
+.draft-toolbar button[aria-pressed=true]{color:#fff;background:var(--accent);border-color:var(--accent)}
+.draft-canvasbox{background:#edf0f4;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.draft-canvasbox svg{width:100%;height:auto;display:block;touch-action:none;aspect-ratio:1000/680}
+.draft-foot{padding-top:10px;display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+.draft-foot label{font-size:12px;display:flex;gap:6px;align-items:center;color:var(--sub)}
+.draft-foot select{max-width:220px;padding:7px;border-radius:9px;background:var(--field);border:1px solid var(--line);font-size:12px}
+.draft-foot input[type=range]{width:92px;accent-color:var(--accent)}
+.draft-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.draft-actions .btn{flex:1;min-width:120px;font-size:12px;padding:0 9px;min-height:41px}
+.draft-inspector{min-width:0;max-height:calc(100dvh - 152px);overflow-y:auto;scrollbar-width:thin}
+.draft-inspector .card{padding:13px;margin-bottom:10px}
+.draft-state{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;background:var(--card);border-radius:14px;padding:13px;margin-bottom:10px;font-size:12px}
+.draft-state span{color:var(--sub)}
+.draft-list-row{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);padding:10px 5px;display:flex;align-items:center;justify-content:space-between;text-align:left;font-size:14px}
+.draft-list-row[aria-pressed=true]{color:var(--accent)}
+.draft-list-row small{display:block;font-size:11px;color:var(--sub);margin-top:3px}
+.draft-detailgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}
+.draft-detailgrid label,.draft-inspector .field{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--sub)}
+.draft-detailgrid input,.draft-detailgrid select,.draft-inspector .field input{width:100%;min-height:39px;border-radius:9px;border:1px solid var(--line);background:var(--field);padding:5px 9px;color:var(--text)}
+.draft-checkbox{display:flex;align-items:center;gap:7px;font-size:13px;margin:8px 0 14px}
+.draft-checkbox input{width:18px;height:18px}
+.draft-inline{display:flex;gap:7px}.draft-inline .btn{flex:1;min-height:40px;padding:0 7px;font-size:12px}
+.draft-segrow{display:grid;grid-template-columns:1fr 100px 30px;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.draft-segrow select{min-width:0;border-radius:8px;border:1px solid var(--line);background:var(--field);min-height:36px}
+.draft-mini{border:0;border-radius:9px;background:var(--field);font-size:21px;min-height:32px}
+@media(max-width:850px){
+ .draft-layout{grid-template-columns:1fr;gap:10px}.draft-inspector{max-height:none;overflow:visible}
+ .draft-work{padding:8px;border-radius:14px}
+ .draft-toolbar{padding-bottom:8px}.draft-toolbar button{min-width:62px}
+ .draft-page{padding:12px 12px 112px}
+ .draft-top h1{font-size:20px}
+ .draft-foot{align-items:flex-start}.draft-foot label{flex:1}
+}
+@media(max-width:380px){.location-actions{flex-direction:column;align-items:stretch}.location-actions .seg{width:100%}}
+
+/* V14 roof frame planner — touch first */
+.roof-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;max-width:1400px;margin:auto;align-items:start}
+.roof-drawing{min-width:0}.roof-side .card{margin-bottom:12px}.roof-preset{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.roof-preset button{border:1px solid var(--line);border-radius:12px;min-height:52px;background:var(--field);color:var(--text);font-size:24px;display:flex;gap:8px;align-items:center;justify-content:center}
+.roof-preset button span{font-size:13px}.roof-preset button[aria-pressed=true]{background:var(--accent);color:white;border-color:var(--accent)}
+.roof-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.roof-field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--sub);margin-bottom:10px}
+.roof-field input,.roof-field select{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--field);color:var(--text);padding:9px;width:100%;font-size:15px}
+.roof-canvas svg{aspect-ratio:1000/670}.roof-toolbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}.roof-toolbar .btn{min-width:0;min-height:44px;font-size:12px;padding:0 5px}
+@media(max-width:850px){.roof-layout{grid-template-columns:1fr}.roof-preset button{min-height:46px}.roof-side{display:contents}.roof-drawing{padding:10px}.roof-toolbar{grid-template-columns:repeat(3,1fr)}.roof-field input,.roof-field select{min-height:48px}}
+
+/* V15: fabricant reference catalog, responsive 44px touch targets */
+.ref-head{display:flex;align-items:start;gap:10px;justify-content:space-between;margin-bottom:12px}.ref-head .h1{margin:3px 0 5px}
+.ref-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.ref-profile{border:1px solid var(--line);background:var(--field);color:var(--text);border-radius:12px;padding:10px 6px;min-height:65px;display:flex;flex-direction:column;justify-content:center;gap:4px;align-items:center}.ref-profile b{font-size:17px}.ref-profile span{font-size:10px;text-align:center;color:var(--sub)}.ref-profile[aria-pressed="true"]{background:#eaf3ff;border-color:#0071e3;color:#0068cc}
+#profVisual{display:flex;justify-content:center;padding:8px 0}.ref-row{display:flex;justify-content:space-between;align-items:start;gap:12px;min-height:47px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}.ref-row>*{min-width:0}.ref-row small{display:block;color:var(--sub);font-size:11px;margin-top:4px}.ref-code{text-align:right;color:var(--sub);font-size:12px;max-width:45%}.ref-manual{display:block;min-height:44px;padding:12px 14px;margin:10px 0;border-radius:12px;background:var(--field);color:var(--accent);font-weight:600;text-decoration:none;font-size:14px}
+.ref-door-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.ref-door-grid label{color:var(--sub);font-size:12px;display:flex;flex-direction:column;gap:5px}.ref-door-grid input{min-width:0;width:100%;min-height:44px;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--text);font-size:16px}.ref-check{display:flex;gap:12px;align-items:start;padding:11px 2px;border-bottom:1px solid var(--line);font-size:13px;min-height:44px}.ref-check input{width:20px;height:20px;accent-color:#0071e3;flex:0 0 auto}.ref-ok{background:#e8f7e9;color:#145526;padding:10px;border-radius:10px;font-size:13px;line-height:1.5}@media(prefers-color-scheme:dark){.ref-profile[aria-pressed=true]{background:#103452;color:#a2d2ff}.ref-ok{background:#124126;color:#9defac}}
+
+.ref-details{margin:12px 0}.ref-details summary{cursor:pointer;padding:12px;background:var(--field);border-radius:11px;min-height:44px;font-size:13px;font-weight:600}.ref-details figure{margin:10px 0}.ref-details img{width:100%;height:auto;max-height:540px;object-fit:contain;background:white;border-radius:8px}.ref-details figcaption{font-size:12px;color:var(--sub);margin:6px 0}

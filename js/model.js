@@ -31,7 +31,7 @@
       topScreen: { on: true, length: 16, depth: 2 },
       gutter: { superOn: true, superLen: 16, existingRemain: 2, downspoutNew: true },
       frameColor: 'bronze',
-      mesh: '',
+      mesh: '18×14 fiberglass charcoal',
       quote: { rate: 20, extras: [], lang: 'es', number: '' }
     };
   }
@@ -59,7 +59,14 @@
       dimsEs: fmt(o.w) + ' × ' + fmt(o.h) + (o.type === 'arch' ? ' arco' : ' rect.'),
       sqft: openingArea(o)
     }));
-    if (p.topScreen.on) rows.push({ label: 'Top screen', labelEs: 'Top screen', dims: fmt(p.topScreen.length) + ' × ' + fmt(p.topScreen.depth), dimsEs: fmt(p.topScreen.length) + ' × ' + fmt(p.topScreen.depth), sqft: p.topScreen.length * p.topScreen.depth });
+    if (p.topScreen.on) {
+      const r=p.roofDesign, W=p.topScreen.length, D=p.topScreen.depth;
+      let sf=W*D, label='Top screen';
+      if(r?.status==='approved-conceptual' && r.style==='mansard' && r.inset>0 && r.inset*2<Math.min(W,D)) {
+        const i=r.inset;sf=(W-2*i)*(D-2*i)+2*(W+D-2*i)*Math.hypot(i,r.rise||0);label='Mansard roof screen';
+      } else if(r?.status==='approved-conceptual' && r.style==='gable') {sf=2*W*Math.hypot(D/2,r.rise||0);label='Gable roof screen';}
+      rows.push({label, labelEs:label,dims:fmt(W)+' × '+fmt(D),dimsEs:fmt(W)+' × '+fmt(D),sqft:sf});
+    }
     const total = rows.reduce((s, r) => s + r.sqft, 0);
     return { rows, total };
   }

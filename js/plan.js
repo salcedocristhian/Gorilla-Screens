@@ -1,7 +1,7 @@
-/* Plano de screens estilo hoja de ingeniería (11x17). Rojo = trabajo nuevo. Texto en inglés para permisos. */
+/* Gorilla Screening — 11 x 17 architectural sheets. Bronze linework differentiates new work; never a sealed engineering design. */
 (function () {
   const Mo = window.GSSModel;
-  const RED = [200, 30, 30], BLK = [20, 20, 20], GRY = [120, 120, 120], LRED = [236, 160, 160];
+  const RED = [74, 57, 44], BLK = [28, 37, 49], GRY = [116, 122, 130], LRED = [198, 201, 203];
 
   window.GSSPlan = async function (P, A) {
     const { jsPDF } = window.jspdf;
@@ -41,7 +41,7 @@
       const X = 14.1, W = 2.52; lw(0.012); doc.line(X, 0.38, X, 10.62);
       if (A.logo) doc.addImage(A.logo, 'PNG', X + 0.26, 0.5, 2.0, 1.48);
       let y = 2.15; col(GRY); font(6, 'bold'); doc.text('PREPARED BY:', X + 0.1, y); col(BLK);
-      font(8, 'bold'); doc.text(company.name || 'GORILLA SCREENING SOLUTIONS LLC', X + 0.1, y + 0.15);
+      font(7, 'bold'); doc.text(doc.splitTextToSize(company.name || 'GORILLA SCREENING SOLUTIONS LLC', W-0.2).slice(0,2), X + 0.1, y + 0.15);
       const cl = [company.address || '[COMPANY ADDRESS]', 'tel: ' + (company.phone || '[PHONE]'), company.email || '[EMAIL]', 'LIC. # ' + (company.license || '[CONTRACTOR LICENSE]')];
       font(6.5); cl.forEach((l, i) => doc.text(l, X + 0.1, y + 0.28 + i * 0.11));
       y += 0.3 + cl.length * 0.11; lw(0.008); doc.line(X, y, X + W, y);
@@ -51,7 +51,7 @@
       y += 0.44; col(GRY); font(6, 'bold'); doc.text('OWNER:', X + 0.1, y); col(BLK); font(7); doc.text(P.client.name || '[OWNER NAME]', X + 0.6, y);
       y += 0.1; doc.line(X, y, X + W, y);
       y += 0.15; col(GRY); font(6, 'bold'); doc.text('ENGINEER OF RECORD:', X + 0.1, y); col(BLK); font(7); doc.text(company.engineer || '[ENGINEER NAME] - FL PE # [ ]', X + 0.1, y + 0.13);
-      y += 0.22; lw(0.008); doc.rect(X + 0.45, y, 1.6, 1.3); col(GRY); font(6, 'bold'); doc.text('SEAL', X + 1.25, y + 0.68, { align: 'center' }); col(BLK);
+      y += 0.22; lw(0.008); doc.rect(X + 0.45, y, 1.6, 1.3); col(GRY); font(6, 'bold'); doc.text('ENGINEER SEAL', X + 1.25, y + 0.58, { align: 'center' }); doc.text('(NOT PROVIDED)', X + 1.25, y + 0.73, { align: 'center' }); col(BLK);
       y += 1.42; col(GRY); y = wrap('Designs are subject to modification as required by actual field measurements, standard industry practices, existing structural conditions and applicable building codes (FBC). Contractor shall field verify all dimensions and conditions prior to fabrication. These plans are the property of ' + (company.name || 'Gorilla Screening Solutions LLC') + ' and shall not be reproduced without written consent.', X + 0.1, y, W - 0.2, 5, 1.2); col(BLK);
       y += 0.05; doc.line(X, y, X + W, y);
       y += 0.14; font(6, 'bold'); doc.text('REVISIONS', X + 0.1, y); y += 0.06;
@@ -62,6 +62,47 @@
       font(7, 'bold'); col(GRY); doc.text('SHEET', X + 0.1, sy + 0.16); col(BLK);
       font(9, 'bold'); doc.text(sheetName, X + 0.1, sy + 0.38); font(22, 'bold'); doc.text(sheetNo, X + W - 0.12, sy + 0.86, { align: 'right' });
     }
+
+    // ===================== G-0: project cover + site location + aerial reference
+    // The app uses an uploaded, authorized aerial photograph only. Never manufactures a Google capture.
+    frame('G-0', 'SITE & LOCATION');
+    (function cover() {
+      const x=0.8, right=13.82;
+      const label=(name, xx, yy)=>{col(BLK);font(9,'bold');doc.text(name,xx,yy);};
+      const box=(xx,yy,ww,hh)=>{col([188,193,199]);lw(.009);doc.rect(xx,yy,ww,hh);col(BLK);};
+      const put=(im, xx, yy, ww, hh, fmt)=>{if(!im)return false;try{doc.addImage(im,fmt||'JPEG',xx,yy,ww,hh,undefined,'FAST');return true;}catch(e){return false;}};
+      // Cover header
+      doc.setFillColor(39,51,65);doc.rect(.78,.7,13.05,.54,'F');
+      doc.setTextColor(255,255,255);font(15,'bold');doc.text('PROPOSED SCREEN ENCLOSURE  |  FIELD DESIGN',1.0,1.04);
+      col(BLK);font(10,'bold');doc.text(P.address||'PROJECT ADDRESS TO BE CONFIRMED',1.0,1.51);
+      font(7);col(GRY);doc.text('CLIENT: '+(P.client.name||'TO BE CONFIRMED'),1.0,1.74);
+      const status=P.approvedDrawing?.revision?'2D DRAWING APPROVED - REV '+P.approvedDrawing.revision:'CONCEPTUAL / PENDING FIELD VERIFICATION';
+      doc.text('DRAWING STATUS: '+status,6.4,1.74);
+      // Project perspective and existing photo
+      label('PROPOSED FINISHED VIEW  /  3D CONCEPT',.91,2.13);box(.9,2.25,7.58,4.25);
+      if(!put(A.persp,.95,2.30,7.48,4.14,'JPEG')){col(GRY);font(10);doc.text('3D PREVIEW UNAVAILABLE',4.65,4.48,{align:'center'});}
+      label('EXISTING CONDITION  /  FIELD PHOTO',8.68,2.13);box(8.65,2.25,5.18,4.25);
+      const existing=(A.photos||[]).find(q=>q.label?.toLowerCase().includes('existing'))||A.photos?.[0];
+      if(!put(existing?.url,8.70,2.30,5.08,4.14,'JPEG')){col(GRY);font(8);doc.text('ADD FRONT PHOTO IN PHOTOS TAB',11.2,4.48,{align:'center'});}
+      // Aerial/Location, dedicated reference that does not misstate location
+      label('AERIAL REFERENCE / SITE LOCATION',.91,6.87);box(.9,6.97,7.58,2.73);
+      if(!put(A.aerial,1.0,7.08,7.36,2.46,'JPEG')){
+        col(GRY);font(9,'bold');doc.text('NO AERIAL IMAGE ATTACHED',4.67,7.95,{align:'center'});
+        font(7);doc.text('Add an authorized aerial photo in the Photos tab.',4.67,8.23,{align:'center'});
+        doc.text('Aerial image will then appear on this sheet automatically.',4.67,8.43,{align:'center'});
+        // north symbol / location concept (not an actual georeferenced plot)
+        col(BLK);lw(.014);doc.line(1.5,8.9,1.5,8.2);doc.line(1.5,8.2,1.39,8.44);doc.line(1.5,8.2,1.61,8.44);font(8,'bold');doc.text('N',1.5,8.1,{align:'center'});
+      }
+      label('LOCATION / SHEET INDEX',8.68,6.87);box(8.65,6.97,5.18,2.73);
+      font(8,'bold');doc.text('PROJECT LOCATION',8.87,7.29);font(8);col(BLK);
+      doc.splitTextToSize(P.address||'Address pending',4.55).slice(0,2).forEach((t,i)=>doc.text(t,8.87,7.52+i*.18));
+      const geo=P.geo;
+      font(7);col(GRY);doc.text(geo?('COORD. (REFERENCE): '+geo.lat.toFixed(5)+', '+geo.lng.toFixed(5)):'COORDINATES: NOT VERIFIED',8.87,8.05);
+      col(BLK);font(7,'bold');doc.text('SHEET INDEX',8.87,8.36);font(7);
+      [['G-0','Site / Location'],['S-1','Elevations / Roof & Porch Plans'],['S-2','Construction Details'],['S-3','Photos / 3D References']].forEach((e,i)=>doc.text(e[0]+'  '+e[1],8.87,8.56+i*.20));
+      col(GRY);font(6.5);doc.text('Concept presentation only. Verify field dimensions, loads and connections.',.9,10.16);
+    })();
+    doc.addPage([11, 17], 'landscape');
 
     // ===================== S-1: elevation, top screen plan, porch plan, sq ft, notes
     frame('S-1', 'SCREEN PLAN');
@@ -80,6 +121,22 @@
         const fr = FR * s;
         col(LRED); lw(0.003); meshOpen(o, X, Y, s, fr, 0.06);
         col(RED); lw(0.012); poly(openPts(o, X, Y, s)); poly(openPts(o, X, Y, s, fr));
+        // User-drawn members from the approved photo-traced frame plan.
+        (o.segments || []).forEach(m => {
+          const t = Math.min(.96, Math.max(.04, Number(m.t) || .5));
+          const ow = Math.max(1, Math.min(4, parseFloat(String(m.profile||'1x2').split('x')[0])||1));
+          lw(Math.max(.006, ow/12*s));
+          if(m.direction==='v') {
+            const xx=o.x0+o.w*t, dx=xx-o.cx;
+            const yy=o.type==='arch' ? (o.h-o.w/2+Math.sqrt(Math.max(0, o.w*o.w/4-dx*dx))) : o.h;
+            doc.line(X(xx),Y(0),X(xx),Y(yy));
+          } else {
+            const yy=o.h*t;
+            let a=o.x0,b=o.x1;
+            if(o.type==='arch'&&yy>o.h-o.w/2){const dy=yy-(o.h-o.w/2),half=Math.sqrt(Math.max(0,o.w*o.w/4-dy*dy));a=o.cx-half;b=o.cx+half;}
+            doc.line(X(a),Y(yy),X(b),Y(yy));
+          }
+        });
         if (o.door) { const dh = o.type === 'arch' ? o.h - o.w / 2 : Math.min(o.h, 6.67); lw(0.014); doc.line(X(o.x0), Y(dh), X(o.x1), Y(dh)); doc.line(X(o.x0) + fr * 2, Y(0), X(o.x0) + fr * 2, Y(dh)); doc.line(X(o.x1) - fr * 2, Y(0), X(o.x1) - fr * 2, Y(dh)); doc.line(X(o.x0), Y(dh / 2), X(o.x1), Y(dh / 2)); doc.circle(X(o.x1) - 0.12, Y(dh / 2 + 0.4), 0.02, 'F'); }
       });
       // NEW top screen (edge) + super gutter + downspout (hidden behind wall)
@@ -111,10 +168,19 @@
       doc.rect(X(0), Z(dep), len * s, 1.0 * s); font(5.5); doc.text('EXIST. ARCH WALL BELOW', X(len / 2), Z(dep) + 1.0 * s + 0.1, { align: 'center' });
       col(LRED); lw(0.003); meshRect(X(0), X(len), Z(0), Z(dep), 0.06);
       col(RED); lw(0.018); doc.rect(X(0), Z(0), len * s, dep * s);
+      // Concept roof profiles are governed by the separately approved roof frame layout.
+      const roof=P.roofDesign?.status==='approved-conceptual'?P.roofDesign:null;
+      if(roof?.style==='mansard'&&roof.inset*2<Math.min(len,dep)) {
+        const ins=roof.inset;doc.rect(X(ins),Z(ins),(len-2*ins)*s,(dep-2*ins)*s);
+        [[0,0,ins,ins],[len,0,len-ins,ins],[0,dep,ins,dep-ins],[len,dep,len-ins,dep-ins]].forEach(a=>doc.line(X(a[0]),Z(a[1]),X(a[2]),Z(a[3])));
+      } else if(roof?.style==='gable'){
+        doc.line(X(0),Z(dep/2),X(len),Z(dep/2));
+      }
+      (roof?.bays||[]).forEach(t=>{const xx=len*Math.max(.04,Math.min(.96,t));doc.line(X(xx),Z(0),X(xx),Z(dep));});
       if (P.gutter.superOn) { lw(0.01); doc.setLineDashPattern([0.06, 0.04], 0); doc.line(X(len - Math.min(len, P.gutter.superLen)), Z(0) - 0.03, X(len), Z(0) - 0.03); doc.setLineDashPattern([], 0); }
       dimH(X(0), X(len), Z(dep) + 1.0 * s + 0.24, ftin(len) + ' (F.V.)');
       dimV(X(0) - 0.15, Z(0), Z(dep), ftin(dep));
-      leader(X(len * 0.25), Z(dep / 2), X(len) + 0.2, Z(dep / 2) - 0.25, ['NEW TOP SCREEN - ONE PANEL', '1"x2" PERIMETER FRAME, ' + FC, 'NO INTERMEDIATE SUPPORTS', 'SCREEN MESH ' + (P.mesh || '[MESH TYPE]'), Math.round(len * dep) + ' SQ FT'], RED);
+      leader(X(len * 0.25), Z(dep / 2), X(len) + 0.2, Z(dep / 2) - 0.25, ['NEW ROOF SCREEN - ' + (roof?.style?.toUpperCase()||'FLAT'), 'PERIMETER FRAME, ' + FC, (roof?.bays?.length ? roof.bays.length + ' INTERIOR BEAMS (PRELIMINARY)' : 'NO INTERIOR BEAMS SHOWN'), 'SCREEN MESH ' + (P.mesh || '[MESH TYPE]'), Mo.areas(P).rows.at(-1).sqft.toFixed(1) + ' SQ FT'], RED);
       title(ox, Z(dep) + 1.0 * s + 0.72, 4, 'TOP SCREEN PLAN', sl);
     })();
     (function porchPlan() {
@@ -144,11 +210,11 @@
     })();
     (function notes() {
       let y = 2.55 + Mo.areas(P).rows.length * 0.19, x = 10.75, w = 3.1; col(BLK); font(8, 'bold'); doc.text('SCREEN NOTES', x, y); y += 0.12;
-      col(RED); font(6, 'bold'); doc.text('ALL RED LINES INDICATE NEW WORK TO BE INSTALLED.', x, y + 0.04); col(BLK); y += 0.18;
+      col(RED); font(6, 'bold'); doc.text('DARK BRONZE = PROPOSED ALUMINUM / SCREEN. GRAY = EXISTING CONDITIONS.', x, y + 0.04); col(BLK); y += 0.18;
       const N = [
         'PROVIDE NEW 1"x2" ALUMINUM FRAME, ' + FC + ' FINISH, ONE CONTINUOUS PIECE AROUND EACH OPENING' + (nArch ? ', ROLLED TO THE ARCH RADIUS AT ARCHED OPENINGS.' : '.'),
         'SCREEN MESH: ' + (P.mesh || '[MESH TYPE]') + ', INSTALLED WITH SPLINE, TIGHT AND WRINKLE-FREE.',
-        P.topScreen.on ? 'NEW TOP SCREEN: ONE CONTINUOUS PANEL ' + ftin(P.topScreen.length) + ' x ' + ftin(P.topScreen.depth) + ' BETWEEN TOP OF ARCH WALL AND EXIST. FASCIA, 1"x2" PERIMETER FRAME ONLY - NO INTERMEDIATE / PERPENDICULAR SUPPORTS.' : '',
+        P.topScreen.on ? 'ROOF SCREEN: ' + (P.roofDesign?.status==='approved-conceptual'?P.roofDesign.style.toUpperCase():'FLAT') + ' ' + ftin(P.topScreen.length) + ' x ' + ftin(P.topScreen.depth) + ' AT APPROVED/PROPOSED ROOF GEOMETRY, WITH PERIMETER AND ANY APPROVED INTERIOR MEMBERS. FIELD VERIFY.' : '',
         P.gutter.superOn ? 'NEW ' + Math.round(P.gutter.superLen) + ' LF SUPER GUTTER ON EXIST. FASCIA (INSIDE THE ENCLOSURE), COLOR TO MATCH FRAME.' : '',
         P.gutter.existingRemain ? '(' + P.gutter.existingRemain + ') EXISTING REGULAR GUTTER(S) TO REMAIN.' : '',
         P.gutter.downspoutNew ? 'REPLACE DOWNSPOUT WITH NEW, SAME LOCATION AND POSITION, COLOR TO MATCH FRAME.' : '',
