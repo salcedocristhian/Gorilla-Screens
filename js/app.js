@@ -385,6 +385,8 @@
     $$('[data-ab]', el).forEach(b => b.onclick = () => { S.after = b.dataset.ab === '1'; v.setAfter(S.after); $$('[data-ab]', el).forEach(x => x.setAttribute('aria-pressed', String(x === b))); name(); });
   }
   function tab3D(el) {
+    // Resolve the active project in this scope; V16's missing `p` blanked the demo 3D tab.
+    const p = S.project;
     if(S.project.kind==='field' && !Mo.hasApprovedGeometry(S.project)){
       el.innerHTML=`<section class="card field-start"><div class="cap">MODELO 3D · PROYECTO INDIVIDUAL</div><h2>Primero aprueba el dibujo del proyecto</h2><p class="lead">Este proyecto todavía no tiene geometría aprobada. Nunca mostraremos una casa o un screen enclosure de otro cliente.</p><a class="btn block" href="#/p/${S.project.id}/editor" style="text-decoration:none">Abrir editor 2D</a></section>`;return;
     }
