@@ -18,15 +18,15 @@
   };
   const TABS = [['datos', 'Datos'], ['fotos', 'Fotos'], ['medidas', 'Medidas'], ['3d', '3D'], ['precio', 'Precio'], ['entregar', 'Entregar']];
   const PHOTO_CATS = [
-    ['aerea', 'Vista aérea', 'Captura de Google Maps satélite. Uso interno.'],
-    ['street', 'Street View', 'Captura de la casa desde la calle. Uso interno.'],
+    ['aerea', 'Vista aérea', 'Imagen aérea autorizada o fotografía propia. Se muestra en el plano de ubicación.'],
+    ['street', 'Vista desde la calle', 'Fotografía propia o referencia con derechos de uso.'],
     ['frente', 'Frente de la casa', 'Foto completa del frente, de esquina a esquina.'],
     ['openings', 'Cada opening', 'Una foto de frente por opening, con la cinta métrica visible si puedes.'],
     ['porche', 'Porche / interior', 'Desde adentro, mirando a los lados: puerta, ventana, luz, piso.'],
     ['detalles', 'Fascia, gutters y downspout', 'Fascia, gutters existentes, downspout y techo.'],
     ['render', 'Render propuesto (opcional)', 'Si ya tienes un render del diseño.']
   ];
-  const VIEWS = [['frente', 'Frente'], ['izq', 'Lado izq.'], ['der', 'Lado der.'], ['arcos', 'Openings'], ['top', 'Top screen'], ['porche', 'Porche'], ['aerea', 'Aérea']];
+  const VIEWS = [['frente', 'Frente'], ['izq', 'Lado izq.'], ['der', 'Lado der.'], ['arcos', 'Openings'], ['top', 'Techo'], ['porche', 'Porche'], ['aerea', 'Aérea']];
 
   let S = { project: null, photos: [], viewer: null, builtFor: '', view: 'frente', after: true, land: true, palms: false, logoData: null, saveT: null };
 
@@ -59,7 +59,12 @@
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
   function slug(s) { return String(s || 'proyecto').split(',')[0].trim().replace(/[^\w]+/g, '-').replace(/^-|-$/g, '') || 'proyecto'; }
-  function saveSoon() { clearTimeout(S.saveT); S.saveT = setTimeout(() => St.saveProject(S.project).catch(() => toast('No se pudo guardar en el dispositivo')), 350); }
+  function saveSoon() {
+    clearTimeout(S.saveT);
+    const item = S.project; // capture the owner: never save the next project in a pending callback
+    if (!item) return;
+    S.saveT = setTimeout(() => St.saveProject(item).catch(() => toast('No se pudo guardar en el dispositivo')), 350);
+  }
 
   // ---------- viewer (one WebGL renderer for the whole app: phones limit how many you can open)
   function viewer() {
@@ -69,7 +74,10 @@
       $('#offscreen').addEventListener('viewer-lost', () => toast('El 3D se pausó por memoria. Recarga la página.', 5000));
       app.addEventListener('viewer-lost', () => toast('El 3D se pausó por memoria. Recarga la página.', 5000));
     }
-    const key = JSON.stringify([S.project.house, S.project.openings, S.project.pier, S.project.topScreen, S.project.gutter, S.project.frameColor, S.project.address]);
+    const key = JSON.stringify([S.project.id, S.project.kind, S.project.approvedDrawing?.revision,
+      S.project.roofDesign?.revision, S.project.house, S.project.openings, S.project.pier,
+      S.project.topScreen, S.project.gutter, S.project.frameColor, S.project.address]);
+    if (S.project.kind === 'field' && !Mo.hasApprovedGeometry(S.project)) return null;
     if (S.builtFor !== key) { S.viewer.build(S.project); S.builtFor = key; S.viewer.goView(S.view, true); }
     S.viewer.setAfter(S.after); S.viewer.setLandscape(S.land); S.viewer.setPalms(S.palms);
     return S.viewer;
@@ -87,7 +95,7 @@
       if (!S.project || S.project.id !== parts[1]) {
         const p = await St.getProject(parts[1]);
         if (!p) { location.hash = '#/'; return; }
-        S.project = Mo.normalize(p); S.builtFor = ''; await loadPhotos();
+        S.project = Mo.normalize(p); S.builtFor = ''; S.view='frente'; S.after=true; await loadPhotos();
       }
       return projectView(parts[2] || 'datos');
     }
@@ -107,19 +115,22 @@
     app.innerHTML = topbar('Gorilla Screens', 'Proyectos de screens', '', `<a class="iconbtn" href="#/ajustes" aria-label="Ajustes de la compañía">${IC.gear}</a>`) + `
       <main class="wrap">
         <h1 class="h1">Proyectos</h1>
-        <p class="lead">Mide, cotiza y entrega el plano desde el celular.</p>
+        <p class="lead">Para campo: fotografías → dibujo → medidas verificadas → 3D y plano.</p>
         <div class="home-tools" style="margin-bottom:14px">
           <label class="field project-search"><span class="sr-only">Filtrar proyectos</span><input id="projectFilter" type="search" placeholder="⌕  Buscar proyectos" aria-label="Buscar proyectos"></label>
           <button class="iconbtn tool-plus" data-a="new" aria-label="Crear nuevo proyecto" title="Nuevo proyecto">+</button>
           <label class="iconbtn tool-upload" title="Importar proyecto" aria-label="Importar proyecto">⇧<input type="file" accept=".json,application/json" data-a="import"></label>
         </div>
+        <div class="card field-start"><div class="row"><span class="l"><b>Desde fotografías</b><br><span class="sub">Crea un proyecto vacío, toma fotos y traza tu propio diseño.</span></span><span class="field-steps">01 → 02 → 03</span></div><button class="btn block" data-a="newphoto">+ Proyecto desde fotos</button></div>
         ${St.usingMemory() ? '<p class="warn">Este navegador no permite guardar en el dispositivo (modo privado). Los proyectos se perderán al cerrar.</p>' : ''}
         <div class="plist">
-          ${list.map(p => { const q = Mo.quoteTotals(Mo.normalize(p)); return `<a class="pitem" href="#/p/${esc(p.id)}/datos" style="text-decoration:none;color:inherit"><img class="thumb" src="${LOGO}" alt=""><div style="min-width:0"><b>${esc(p.address || 'Sin dirección')}</b><span>${esc(p.client && p.client.name || 'Sin cliente')} · ${q.sqft.toFixed(0)} pie² · ${Mo.money(q.total)}</span><span>Actualizado ${new Date(p.updatedAt).toLocaleDateString('es-US')}</span></div></a>`; }).join('') || '<div class="card sub">Todavía no hay proyectos.</div>'}
+          ${list.map(p => { const q = Mo.quoteTotals(Mo.normalize(p)); return `<a class="pitem" href="#/p/${esc(p.id)}/datos" style="text-decoration:none;color:inherit"><img class="thumb" src="${LOGO}" alt=""><div style="min-width:0"><b>${esc(p.address || 'Sin dirección')}</b><span>${esc(p.client && p.client.name || 'Sin cliente')} · ${Mo.hasApprovedGeometry(p) || p.kind!=='field' ? q.sqft.toFixed(0)+' pie²' : 'Geometría pendiente'}${p.quote?.rate>0 && q.sqft>0 ? ' · '+Mo.money(q.total) : ''}</span><span>Actualizado ${new Date(p.updatedAt).toLocaleDateString('es-US')}</span></div></a>`; }).join('') || '<div class="card sub">Todavía no hay proyectos.</div>'}
         </div>
         ${list.some(p => p.id === 'demo-22743') ? '' : '<div class="pad"></div><button class="btn sec block" data-a="demo">Cargar proyecto de ejemplo (22743 SW 56th Ave)</button>'}
       </main>`;
-    $('[data-a="new"]').onclick = async () => { const p = Mo.defaultProject(); await St.saveProject(p); location.hash = '#/p/' + p.id + '/datos'; };
+    const createEmpty = async () => { const p = Mo.emptyProject(); await St.saveProject(p); location.hash = '#/p/' + p.id + '/datos'; };
+    $('[data-a="new"]').onclick = createEmpty;
+    $('[data-a="newphoto"]').onclick = createEmpty;
     const dm = $('[data-a="demo"]'); if (dm) dm.onclick = loadDemo;
     $('[data-a="import"]').onchange = importProject;
     $('#projectFilter').oninput = e => { const q=e.target.value.toLowerCase().trim(); $$('.pitem').forEach(a=>a.style.display=(a.textContent.toLowerCase().includes(q)?'':'none')); };
@@ -134,8 +145,14 @@
   async function importProject(e) {
     const f = e.target.files[0]; if (!f) return;
     try {
-      const data = JSON.parse(await f.text()); const p = Mo.normalize(data.project); p.id = Mo.uid(); await St.saveProject(p);
-      for (const ph of data.photos || []) await St.savePhoto({ id: Mo.uid(), projectId: p.id, cat: ph.cat, blob: dataURLtoBlob(ph.data), createdAt: Date.now() });
+      const data = JSON.parse(await f.text()); if(data.app!=='gorilla-screens' || !data.project || !Array.isArray(data.photos))throw Error('Unsupported project');
+      const p = Mo.normalize(data.project); const idMap={}; p.id=Mo.uid();
+      const parsedPhotos=[];for (const ph of data.photos) {const old=ph.id||ph.sourceId;const nid=Mo.uid();if(old)idMap[old]=nid;parsedPhotos.push({ id:nid,projectId:p.id,cat:ph.cat||'detalles',blob:dataURLtoBlob(ph.data),createdAt:Date.now() });}
+      if(p.drawingDraft?.sourcePhotoId)p.drawingDraft.sourcePhotoId=idMap[p.drawingDraft.sourcePhotoId]||'';
+      if(p.approvedDrawing?.photoId)p.approvedDrawing.photoId=idMap[p.approvedDrawing.photoId]||'';
+      if(p.roofDraft?.photoId)p.roofDraft.photoId=idMap[p.roofDraft.photoId]||'';
+      if(p.roofDesign?.photoId)p.roofDesign.photoId=idMap[p.roofDesign.photoId]||'';
+      await St.saveProject(p); for(const ph of parsedPhotos)await St.savePhoto(ph);
       location.hash = '#/p/' + p.id + '/datos';
     } catch (err) { toast('Archivo no válido'); }
   }
@@ -163,7 +180,7 @@
     if (tab === 'editor') { return tabEditor(el); }
     if (tab === 'roof') { return tabRoof(el); }
     if (tab === 'parts') { return tabParts(el); }
-    ({ datos: tabDatos, fotos: tabFotos, medidas: tabMedidas, '3d': tab3D, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
+    ({ datos: tabDatos, fotos: tabFotos, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
     window.scrollTo(0, 0);
   }
   function tabEditor(el) {
@@ -173,7 +190,7 @@
       project:S.project, photos:S.photos, host:el,
       goBack:()=>location.hash='#/p/'+S.project.id+'/medidas',
       save:()=>{ saveSoon(); },
-      approved:(revision)=>{ S.builtFor=''; toast('Plano aprobado: revisión '+revision); location.hash='#/p/'+S.project.id+'/3d'; }
+      approved:async(revision)=>{ S.builtFor='';try{await St.saveProject(S.project);toast('Plano aprobado: revisión '+revision);location.hash='#/p/'+S.project.id+'/3d';}catch(e){toast('Error guardando revisión. Exporta un respaldo.');} }
     });
   }
 
@@ -189,7 +206,7 @@
     window.GSSRoofEditor.editor({ project:S.project, photos:S.photos, host:el,
       goBack:()=>location.hash='#/p/'+S.project.id+'/medidas',
       save:()=>saveSoon(),
-      approved:(revision)=>{S.builtFor=''; toast('Techo aprobado · Revisión '+revision); location.hash='#/p/'+S.project.id+'/3d';}
+      approved:async(revision)=>{S.builtFor='';try{await St.saveProject(S.project);toast('Techo aprobado · Revisión '+revision);location.hash='#/p/'+S.project.id+'/3d';}catch(e){toast('No se pudo guardar el techo.');}}
     });
   }
 
@@ -207,6 +224,7 @@
   function tabDatos(el) {
     const p = S.project, m = mapLinks(p);
     el.innerHTML = `
+      ${p.kind==='field'?`<section class="card field-start"><div class="cap">GORILLA FIELD PILOT · DESDE FOTOS</div><h2>Proyecto sin modelo heredado</h2><p class="lead">Primero registra la dirección, luego toma fotografías y dibuja los openings sobre la imagen. El 3D se desbloquea cuando el plano queda aprobado.</p><a class="btn block" href="#/p/${p.id}/fotos" style="text-decoration:none">1 · Continuar a Fotos →</a></section>`:''}
       <div class="card">
         <div class="field"><label for="addr">Dirección del proyecto</label><div class="address-inline"><input id="addr" autocomplete="street-address" value="${esc(p.address)}" placeholder="Dirección del proyecto"><button class="iconbtn search-inside" data-a="geo" title="Buscar ubicación" aria-label="Buscar ubicación">⌕</button></div></div>
         ${p.address ? `<div class="mapbox"><iframe title="Vista satelital" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="${esc(m.embed)}"></iframe></div>
@@ -243,7 +261,7 @@
   }
 
   function tabFotos(el) {
-    const by = c => S.photos.filter(x => x.cat === c);
+    const p=S.project, by = c => S.photos.filter(x => x.cat === c);
     el.innerHTML = PHOTO_CATS.map(([k, l, h]) => `
       <section class="card" aria-labelledby="h-${k}">
         <div class="row" style="min-height:0"><b id="h-${k}" style="font-size:16px">${l}</b><span class="sub">${by(k).length || ''}</span></div>
@@ -253,12 +271,13 @@
           <label class="addph" aria-label="Agregar foto a ${esc(l)}">+<input type="file" accept="image/*" multiple data-cat="${k}"></label>
         </div>
       </section>`).join('');
+    if(p.kind==='field'){el.insertAdjacentHTML('afterbegin',`<section class="card field-start"><div class="cap">PASO 2 · FOTOGRAFÍAS</div><h2>Captura la propiedad real</h2><p class="lead">Toma el frente, cada opening, la fascia y el techo. Después toca ✎ Plano en una foto para trazar el dibujo y verificar dimensiones.</p><a class="btn sec block" href="#/p/${p.id}/editor" style="text-decoration:none">Abrir dibujo 2D</a><p class="lead smalltext">El reconocimiento automático con IA todavía no está conectado. Ninguna dimensión se inventará a partir de la imagen.</p></section>`);}
     $$('input[data-cat]', el).forEach(i => i.onchange = async () => {
       const files = [...i.files]; if (!files.length) return; toast('Guardando ' + files.length + ' foto(s)…');
       for (const f of files) { try { const b = await resizeImage(f, 1600); await St.savePhoto({ id: Mo.uid(), projectId: S.project.id, cat: i.dataset.cat, blob: b, createdAt: Date.now() }); } catch (e) { toast('Una foto no se pudo leer'); } }
       await loadPhotos(); tabFotos(el);
     });
-    $$('[data-del]', el).forEach(b => b.onclick = async () => { await St.deletePhoto(b.dataset.del); await loadPhotos(); tabFotos(el); });
+    $$('[data-del]', el).forEach(b => b.onclick = async () => {const phid=b.dataset.del;if(S.project.approvedDrawing?.photoId===phid){alert('Esta foto es la referencia de un plano aprobado. Para retirarla, genera primero una nueva revisión con otra fotografía.');return;}if(!confirm('¿Eliminar esta fotografía del proyecto?'))return;if(S.project.drawingDraft?.sourcePhotoId===phid){S.project.drawingDraft.sourcePhotoId='';saveSoon();}await St.deletePhoto(phid);await loadPhotos();tabFotos(el);});
     $$('[data-trace]',el).forEach(b=>b.onclick=()=>{window.GSSPhotoEditor.initDraft(S.project).sourcePhotoId=b.dataset.trace;saveSoon();location.hash='#/p/'+S.project.id+'/editor';});
     $$('[data-open]', el).forEach(b => b.onclick = () => { const x = S.photos.find(y => y.id === b.dataset.open); const o = document.createElement('div'); o.className = 'overlay'; o.innerHTML = `<img src="${x.url}" alt=""><button aria-label="Cerrar">×</button>`; o.onclick = () => o.remove(); document.body.appendChild(o); });
   }
@@ -266,6 +285,24 @@
   // feet + inches input pair
   function ftin(id, val) { const s = Mo.split(val); return `<div class="ftin"><input id="${id}-f" inputmode="decimal" aria-label="pies" value="${s.f}"><span>′</span><input id="${id}-i" inputmode="decimal" aria-label="pulgadas" value="${s.i}"><span>″</span></div>`; }
   function readFtin(id) { const f = parseFloat(($('#' + id + '-f') || {}).value) || 0, i = parseFloat(($('#' + id + '-i') || {}).value) || 0; return f + i / 12; }
+  function tabFieldMeasures(el) {
+    const p=S.project, ok=Mo.hasApprovedGeometry(p), items=p.approvedDrawing?.items||[];
+    const nDraft=p.drawingDraft?.items?.length||0;
+    const q=Mo.areas(p), roof=p.roofDesign?.status==='approved-conceptual';
+    el.innerHTML=`<div class="card field-start"><div class="cap">PASO 3 · PHOTO → PLAN</div>
+      <h2>${ok?'Plano geométrico aprobado · REV '+p.approvedDrawing.revision:'Plano por dibujar o verificar'}</h2>
+      <p class="lead">${ok?'Puedes editar el diseño y aprobar una nueva revisión; hasta entonces solo la revisión aprobada debe generar resultados.':'Abre una foto y dibuja cada opening. Marca como verificadas las medidas que confirmaste físicamente en la propiedad.'}</p>
+      <div class="field-summary"><span>${nDraft} openings en borrador</span><span>${ok?'✓ Aprobado':'Pendiente'}</span></div>
+      <a class="btn block" href="#/p/${p.id}/editor" style="text-decoration:none">✎ ${ok?'Editar nuevo plano':'Dibujar openings sobre foto'}</a></div>
+      <div class="card"><div class="cap">OPENINGS · MEDIDAS APROBADAS</div>
+      ${items.length?items.map((o,i)=>`<div class="field-measure-row"><span><b>${i+1}. ${o.type==='arch'?'Arco':'Rectangular'}</b><small>${o.profile||'1x2'} · ${o.door?'Con puerta · ':''}${o.verified?'✓ Verificado':'Por verificar'}</small></span><b>${Mo.fmt(o.w)} × ${Mo.fmt(o.h)}</b></div>`).join(''):'<p class="lead">No hay geometría aprobada. Este proyecto no utiliza los arcos de Boca Raton.</p>'}
+      <div class="row"><span class="l">Área de screen del proyecto</span><b>${ok?q.total.toFixed(1)+' pie²':'—'}</b></div></div>
+      <div class="card"><div class="cap">ROOF FRAME PLAN</div><p class="lead">${roof?'✓ '+p.roofDesign.style.toUpperCase()+' · revisión '+p.roofDesign.revision:'Opcional · crear solo cuando exista techo dentro del alcance'}</p>
+      <a class="btn sec block" href="#/p/${p.id}/roof" style="text-decoration:none">▱ Flat / Mansard / Gable · Editor</a></div>
+      <div class="card"><div class="cap">BIBLIOTECA TÉCNICA</div><a class="btn sec block" href="#/p/${p.id}/parts" style="text-decoration:none">Perfiles, puertas y manuales del fabricante</a></div>
+      <div class="card"><p class="lead smalltext">Las fotos no proporcionan medidas exactas ni información estructural oculta. Validar la escala, los anclajes y las condiciones existentes en campo.</p></div>`;
+  }
+
   function tabMedidas(el) {
     const p = S.project, a = Mo.areas(p), L = Mo.layout(p);
     const sw = (id, on, label) => `<div class="row"><span class="l">${label}</span><button class="sw" id="${id}" aria-pressed="${on}" aria-label="${esc(label)}"></button></div>`;
@@ -348,8 +385,15 @@
     $$('[data-ab]', el).forEach(b => b.onclick = () => { S.after = b.dataset.ab === '1'; v.setAfter(S.after); $$('[data-ab]', el).forEach(x => x.setAttribute('aria-pressed', String(x === b))); name(); });
   }
   function tab3D(el) {
+    if(S.project.kind==='field' && !Mo.hasApprovedGeometry(S.project)){
+      el.innerHTML=`<section class="card field-start"><div class="cap">MODELO 3D · PROYECTO INDIVIDUAL</div><h2>Primero aprueba el dibujo del proyecto</h2><p class="lead">Este proyecto todavía no tiene geometría aprobada. Nunca mostraremos una casa o un screen enclosure de otro cliente.</p><a class="btn block" href="#/p/${S.project.id}/editor" style="text-decoration:none">Abrir editor 2D</a></section>`;return;
+    }
+    if(S.project.kind==='field'){
+      el.innerHTML=`<div class="card field-start"><div class="cap">VISTA 3D · REV ${S.project.approvedDrawing.revision}</div><p class="lead">Solo muestra los openings y el techo que tú aprobaste. El entorno de la vivienda no se inventa; se incorporará cuando exista una geometría del sitio.</p></div>${viewerMarkup(true)}<div class="card"><div class="row"><span class="l">Revisión de dibujo</span><b>${S.project.approvedDrawing.revision}</b></div><div class="row"><span class="l">Techo</span><b>${S.project.roofDesign?.status==='approved-conceptual'?esc(S.project.roofDesign.style):'Sin techo aprobado'}</b></div></div><button class="btn sec block" data-a="shot">Guardar imagen de esta vista</button>`;
+      wireViewer(el);const btn=$('[data-a="shot"]',el);btn.onclick=async()=>{try{const v=viewer();if(!v)return;await saveBlob('Gorilla-3D-'+slug(S.project.address)+'.png',dataURLtoBlob(v.snapshot(1500,1000,'frente','image/png')));}catch(err){toast('No se pudo exportar imagen');}};return;
+    }
     el.innerHTML = `
-      <div class="seg" role="group" aria-label="Comparar" style="margin-bottom:12px"><button data-ab="0" aria-pressed="${!S.after}">Antes</button><button data-ab="1" aria-pressed="${S.after}">Con screens</button></div>
+      ${p.kind==='field'?'':`<div class="seg" role="group" aria-label="Comparar" style="margin-bottom:12px"><button data-ab="0" aria-pressed="${!S.after}">Antes</button><button data-ab="1" aria-pressed="${S.after}">Con screens</button></div>`}
       ${viewerMarkup(true)}
       <div class="pad"></div>
       <div class="card">
@@ -365,6 +409,7 @@
   }
 
   function tabPrecio(el) {
+    if(S.project.kind==='field' && !Mo.hasApprovedGeometry(S.project)){el.innerHTML=`<section class="card field-start"><div class="cap">COTIZACIÓN</div><h2>Esperando geometría aprobada</h2><p class="lead">No se generará un precio desde el proyecto de prueba. Primero dibuja y verifica tus openings.</p><a class="btn block" href="#/p/${S.project.id}/editor">Abrir editor 2D</a></section>`;return;}
     const p = S.project, q = Mo.quoteTotals(p), preset = [15, 20, 25].includes(Number(p.quote.rate));
     el.innerHTML = `
       <div class="card"><p class="cap">Área de screen</p>
@@ -399,12 +444,23 @@
 
   async function busy(el, on) { $$('button', el).forEach(b => b.disabled = on); }
   async function makeQuote(el) {
+    if(S.project.kind==='field'&&!Mo.hasApprovedGeometry(S.project)){toast('Primero aprueba el plano 2D');return;}
     busy(el, true); toast('Generando cotización…', 8000); await new Promise(r => setTimeout(r, 50));
     try { const v = viewer(); const render = v.snapshot(1500, 920, 'izq', 'image/jpeg', { after: true }); const blob = await window.GSSQuote(S.project, { logo: await logoData(), company: S.project._company || company(), render }); await saveBlob('Cotizacion-' + slug(S.project.address) + '.pdf', blob); toast('Cotización lista'); }
     catch (e) { console.error(e); toast('No se pudo generar la cotización'); }
     busy(el, false);
   }
   async function makePlan(el) {
+    if(S.project.kind==='field' && !Mo.hasApprovedGeometry(S.project)){toast('Primero aprueba el plano 2D');return;}
+    if(S.project.kind==='field'){
+      busy(el,true);try{
+        const existing=S.photos.find(x=>x.cat==='frente')||S.photos.find(x=>x.cat==='openings');
+        const aerial=S.photos.find(x=>x.cat==='aerea');
+        const assets={logo:await logoData(),company:company(),existing:existing?await blobToDataURL(existing.blob):null,aerial:aerial?await blobToDataURL(aerial.blob):null};
+        const blob=await window.GSSFieldPlan(S.project,assets);
+        await saveBlob('Plano-Gorilla-'+slug(S.project.address)+'.pdf',blob);toast('Plano generado desde TU proyecto');
+      }catch(e){console.error(e);toast('Error al generar el plano');}busy(el,false);return;
+    }
     busy(el, true); toast('Generando plano…', 10000); await new Promise(r => setTimeout(r, 50));
     try {
       const v = viewer(), big = v.MOBILE ? [1400, 860] : [2000, 1230];
@@ -420,7 +476,8 @@
   function tabEntregar(el) {
     const p = S.project;
     el.innerHTML = `
-      <div class="card"><p class="cap">Para el ingeniero</p>
+      ${p.kind==='field'&&!Mo.hasApprovedGeometry(p)?`<section class="card field-start"><div class="cap">ENTREGABLES · PENDIENTE</div><h2>Aprueba primero el plano</h2><p class="lead">Mientras tanto puedes exportar y respaldar el proyecto con sus fotos. Ningún PDF mostrará la casa del ejemplo.</p><a class="btn sec block" href="#/p/${p.id}/editor">Abrir dibujo 2D</a></section>`:''}
+      ${p.kind==='field'&&!Mo.hasApprovedGeometry(p)?'':`<div class="card"><p class="cap">Para el ingeniero</p>
         <p class="lead" style="font-size:14px">Plano arquitectónico 11 × 17: portada, ubicación, vista aérea (si fue agregada), elevación, planta, detalles y fotos. Sin líneas rojas; trabajo nuevo en bronce oscuro.</p>
         <button class="btn block" data-a="plan">Descargar plano PDF</button></div>
       <div class="card"><p class="cap">Para el cliente</p>
@@ -428,20 +485,20 @@
         <div class="pad"></div>
         <div class="row"><span class="l">Incluir precio en el link</span><button class="sw" id="wp" aria-pressed="true" aria-label="Incluir precio"></button></div>
         <button class="btn sec block" data-a="link">Compartir link del 3D con el cliente</button>
-        <p class="lead" style="font-size:13px;margin:8px 0 0">El link lleva el modelo y la cotización, sin fotos ni notas internas.</p></div>
+        <p class="lead" style="font-size:13px;margin:8px 0 0">El link lleva el modelo y la cotización, sin fotos ni notas internas.</p></div>`}
       <div class="card"><p class="cap">Pasar el proyecto a otro dispositivo</p>
         <button class="btn sec block" data-a="export">Exportar proyecto con fotos (.json)</button></div>`;
-    $('[data-a="plan"]', el).onclick = () => makePlan(el);
-    $('[data-a="quote"]', el).onclick = () => makeQuote(el);
-    $('#wp', el).onclick = e => e.currentTarget.setAttribute('aria-pressed', String(e.currentTarget.getAttribute('aria-pressed') !== 'true'));
-    $('[data-a="link"]', el).onclick = async () => {
-      const url = shareURL($('#wp', el).getAttribute('aria-pressed') === 'true');
+    const btnPlan=$('[data-a="plan"]',el);if(btnPlan)btnPlan.onclick = () => makePlan(el);
+    const btnQuote=$('[data-a="quote"]',el);if(btnQuote)btnQuote.onclick = () => makeQuote(el);
+    if($('#wp',el))$('#wp', el).onclick = e => e.currentTarget.setAttribute('aria-pressed', String(e.currentTarget.getAttribute('aria-pressed') !== 'true'));
+    const btnLink=$('[data-a="link"]',el);if(btnLink)btnLink.onclick = async () => {
+      const url = shareURL($('#wp', el)?.getAttribute('aria-pressed') === 'true');
       try { if (navigator.share) { await navigator.share({ title: 'Su proyecto de screens', url }); return; } } catch (e) { if (e.name === 'AbortError') return; }
       try { await navigator.clipboard.writeText(url); toast('Link copiado'); } catch (e) { prompt('Copia este link:', url); }
     };
     $('[data-a="export"]', el).onclick = async () => {
       toast('Preparando archivo…');
-      const photos = []; for (const ph of S.photos) photos.push({ cat: ph.cat, data: await blobToDataURL(ph.blob) });
+      const photos = []; for (const ph of S.photos) photos.push({ id: ph.id, cat: ph.cat, data: await blobToDataURL(ph.blob) });
       await saveBlob('Proyecto-' + slug(p.address) + '.json', new Blob([JSON.stringify({ app: 'gorilla-screens', v: 1, project: p, photos })], { type: 'application/json' }));
     };
   }
@@ -449,15 +506,16 @@
   // ---------- client view (read-only, opened from the shared link)
   function clientView(data) {
     let p; try { p = Mo.normalize(Mo.decodeShare(data)); } catch (e) { app.innerHTML = topbar('Link no válido', '') + '<main class="wrap"><div class="card">Este link está incompleto. Pide uno nuevo a tu vendedor.</div></main>'; return; }
-    S.project = p; S.photos = []; S.builtFor = '';
+    S.project = p; S.photos = []; S.builtFor = ''; S.view='frente';
     document.title = 'Su proyecto · ' + (p.address || '');
+    if(p.kind==='field'&&!Mo.hasApprovedGeometry(p)){app.innerHTML=topbar('Plano no aprobado',p.address)+'<main class="wrap"><div class="card">No existe un modelo 3D aprobado para compartir.</div></main>';return;}
     const q = Mo.quoteTotals(p), showPrice = !p.quote.hidePrice;
     app.innerHTML = topbar('Su proyecto de screens', p.address) + `<main class="wrap">
-      <div class="seg" role="group" aria-label="Comparar" style="margin-bottom:12px"><button data-ab="0" aria-pressed="${!S.after}">Antes</button><button data-ab="1" aria-pressed="${S.after}">Con screens</button></div>
+      ${p.kind==='field'?'':`<div class="seg" role="group" aria-label="Comparar" style="margin-bottom:12px"><button data-ab="0" aria-pressed="${!S.after}">Antes</button><button data-ab="1" aria-pressed="${S.after}">Con screens</button></div>`}
       ${viewerMarkup(true)}<div class="pad"></div>
       <div class="card"><p class="cap">Resumen</p>
         <div class="row"><span class="l">Área de screen</span><span class="r">${q.sqft.toFixed(1)} pie²</span></div>
-        <div class="row"><span class="l">Frame</span><span class="r">1×2 de una pieza · ${esc((Mo.FRAME_COLORS[p.frameColor] || {}).name || '')}</span></div>
+        <div class="row"><span class="l">Frame</span><span class="r">${esc(p.kind==='field'?[...new Set(p.openings.map(o=>o.profile||'1x2'))].join(', '):'1×2 de una pieza')} · ${esc((Mo.FRAME_COLORS[p.frameColor] || {}).name || '')}</span></div>
         ${showPrice ? `<div class="row"><span class="l">Total</span><span class="r" style="font-weight:700;color:var(--text)">${Mo.money(q.total)}</span></div>` : ''}
       </div>
       ${showPrice ? '<button class="btn block" data-a="quote">Descargar cotización PDF</button>' : ''}

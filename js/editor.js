@@ -11,7 +11,7 @@ const tools=['select','arch','rect','vertical','horizontal','ruler','erase'];
 function initDraft(p){
  if(!p.drawingDraft){p.drawingDraft={version:1,sourcePhotoId:'',imageOpacity:.49,feetPerPixel:null,referenceFeet:4,items:[],revisionBasedOn:p.approvedDrawing?.revision||0,updatedAt:Date.now()};}
  p.drawingDraft.items ||= [];
- p.drawingDraft.items.forEach(o=>{o.id||=(M.uid());o.segments||=[];});
+ p.drawingDraft.items.forEach(o=>{o.id||=(M.uid());o.segments||=[];if(o.verified===undefined)o.verified=false;});
  return p.drawingDraft;
 }
 function profileSize(v){const z=String(v||'1x2').split('x');return {width:Math.max(.06,(parseFloat(z[0])||1)/12),depth:Math.max(.06,(parseFloat(z[1])||2)/12)};}
@@ -46,10 +46,11 @@ function segLine(o,s){const t=clamp(+s.t||.5,.03,.97);if(s.direction==='v'){
 }
 function editor({project,photos,host,goBack,save,approved}){
  const draft=initDraft(project);
+ if(!draft.sourcePhotoId && photos.length){const ref=photos.find(x=>!['render','aerea','street'].includes(x.cat));if(ref)draft.sourcePhotoId=ref.id;}
  let selected=draft.items[0]?.id||null,tool='select',drag=null,prior=[],rulerStart=null;
  const imgFor=id=>photos.find(x=>x.id===id);
  function src(){return imgFor(draft.sourcePhotoId)?.url||'';}
- function persist(){draft.updatedAt=Date.now();save();}
+ function persist(){draft.updatedAt=Date.now();if(project.kind==='field')project.designStatus='draft';save();}
  function checkpoint(){prior.push(cp(draft.items));if(prior.length>35)prior.shift();}
  const selector=(attr,val,txt)=>`<option value="${esc(val)}" ${attr===val?'selected':''}>${esc(txt)}</option>`;
  host.innerHTML=`<div class="draft-top"><div><div class="draft-eyebrow">PHOTO → PLAN</div><h1>Editor de openings</h1><div class="draft-sub">Traza perfiles sobre la foto. La escala debe verificarse en campo.</div></div><button class="iconbtn draft-close" id="draftClose" aria-label="Volver">✕</button></div>
@@ -82,27 +83,28 @@ function editor({project,photos,host,goBack,save,approved}){
   </g>`;}).join('')}
  ${drag?.kind==='draw'?`<rect x="${Math.min(drag.ax,drag.bx)}" y="${Math.min(drag.ay,drag.by)}" width="${Math.abs(drag.bx-drag.ax)}" height="${Math.abs(drag.by-drag.ay)}" fill="rgba(0,113,227,.09)" stroke="#0071e3" stroke-width="4" stroke-dasharray="10,8"/>`:''}
  ${drag?.kind==='ruler'?`<line x1="${drag.ax}" y1="${drag.ay}" x2="${drag.bx}" y2="${drag.by}" stroke="#ef8a22" stroke-width="5" stroke-dasharray="12,7"/>`:''}
- <text x="18" y="38" fill="#334155" font-size="18" font-weight="700" font-family="system-ui">${photo?'PHOTO TRACE · ESCALA POR VERIFICAR':'PLANO 2D · TOCA PARA DIBUJAR'}</text>`;
+ <text x="18" y="38" fill="#334155" font-size="18" font-weight="700" font-family="system-ui">${photo?'PHOTO TRACE · VERIFICAR MEDIDAS':'PLANO 2D · TOCA PARA DIBUJAR'}</text>`;
  }
  function renderInspector(){
   const o=selectedObject();host.querySelector('#draftState').innerHTML=`<b>${draft.items.length} openings</b><span>${draft.feetPerPixel?'Escala calibrada de forma aproximada':'Sin escala fotográfica calibrada'} · ${project.approvedDrawing?'Revisión aprobada '+project.approvedDrawing.revision:'Sin aprobación previa'}</span>`;
-  host.querySelector('#draftList').innerHTML=draft.items.map((x,i)=>`<button class="draft-list-row" data-pick="${esc(x.id)}" aria-pressed="${x.id===selected}"><span><b>${i+1}. ${x.type==='arch'?'Arco':'Rectangular'}</b><small>${M.fmt(x.physicalW)} × ${M.fmt(x.physicalH)} · ${x.segments.length} perfiles${x.door?' · puerta':''}</small></span><span>›</span></button>`).join('')||'<p class="lead smalltext">Selecciona Arco o Rect., y dibújalo sobre la fotografía.</p>';
+  host.querySelector('#draftList').innerHTML=draft.items.map((x,i)=>`<button class="draft-list-row" data-pick="${esc(x.id)}" aria-pressed="${x.id===selected}"><span><b>${i+1}. ${x.type==='arch'?'Arco':'Rectangular'}</b><small>${M.fmt(x.physicalW)} × ${M.fmt(x.physicalH)} · ${x.segments.length} perfiles${x.verified?' · ✓ medido':' · pendiente'}${x.door?' · puerta':''}</small></span><span>›</span></button>`).join('')||'<p class="lead smalltext">Selecciona Arco o Rect., y dibújalo sobre la fotografía.</p>';
   host.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{selected=b.dataset.pick;renderAll();});
   e.detail.innerHTML=o?`<div class="draft-detailgrid"><label>Ancho (ft)<input id="dw" type="number" min=".3" step=".083333" value="${+o.physicalW.toFixed(3)}"></label><label>Alto (ft)<input id="dh" type="number" min=".3" step=".083333" value="${+o.physicalH.toFixed(3)}"></label></div>
     <div class="draft-detailgrid"><label>Forma<select id="dshape"><option value="arch" ${o.type==='arch'?'selected':''}>Arco</option><option value="rect" ${o.type==='rect'?'selected':''}>Rectangular</option></select></label><label>Perfil perimetral<select id="dprofile">${['1x2','2x2','2x3','3x3','4x4'].map(z=>selector(o.profile,z,z)).join('')}</select></label></div>
-    <label class="draft-checkbox"><input id="ddoor" type="checkbox" ${o.door?'checked':''}> Puerta de screen</label>
+    <label class="draft-checkbox"><input id="ddoor" type="checkbox" ${o.door?'checked':''}> Puerta de screen</label><label class="draft-checkbox"><input id="dverified" type="checkbox" ${o.verified?'checked':''}> Medidas verificadas en campo</label>
     <div class="draft-seglist">${o.segments.map((s,i)=>`<div class="draft-segrow"><span>${s.direction==='v'?'│':'─'} ${i+1}</span><select data-segprofile="${esc(s.id)}">${['1x2','2x2','2x3','3x3','4x4'].map(z=>selector(s.profile,z,z)).join('')}</select><button data-remove-segment="${esc(s.id)}" class="draft-mini" aria-label="Quitar perfil">×</button></div>`).join('')||'<p class="lead smalltext">Dibuja perfiles verticales u horizontales tocando el opening.</p>'}</div>
     <div class="draft-inline"><button class="btn sec" id="draftDuplicate">Duplicar</button><button class="btn danger" id="draftDelete">Eliminar</button></div>`:'<p class="lead smalltext">Selecciona un opening del plano para editar dimensiones, puerta y perfiles.</p>';
   const bom=takeoff(draft);
   host.querySelector('#draftBom').innerHTML=`<div class="row"><span class="l">Área screen (sin descuentos)</span><b>${bom.screenSqFt.toFixed(1)} pie²</b></div><div class="row"><span class="l">Puertas</span><b>${bom.doors}</b></div>${Object.entries(bom.byProfile).map(([k,v])=>`<div class="row"><span class="l">Perfil ${esc(k)}</span><b>${v.toFixed(1)} LF</b></div>`).join('')}<p class="lead smalltext">Estimación geométrica preliminar; desperdicio, splines, fijaciones y cortes no incluidos.</p>`;
   host.querySelector('#draftScale').textContent=draft.feetPerPixel?`1 px ≈ ${(draft.feetPerPixel*12).toFixed(3)}″ (aproximado)`:'Traza una línea con Regla para establecer referencia.';
   if(!o)return;
-  [['dw','physicalW'],['dh','physicalH']].forEach(([id,key])=>{host.querySelector('#'+id).onchange=e=>{checkpoint();o[key]=clampN(e.target.value,.3,100,o[key]);persist();renderAll();};});
+  [['dw','physicalW'],['dh','physicalH']].forEach(([id,key])=>{host.querySelector('#'+id).onchange=e=>{checkpoint();o[key]=clampN(e.target.value,.3,100,o[key]);o.verified=false;persist();renderAll();};});
   host.querySelector('#dshape').onchange=e=>{checkpoint();o.type=e.target.value;persist();renderAll();};
   host.querySelector('#dprofile').onchange=e=>{checkpoint();o.profile=e.target.value;persist();renderAll();};
+  host.querySelector('#dverified').onchange=e=>{o.verified=e.target.checked;persist();renderAll();};
   host.querySelector('#ddoor').onchange=e=>{checkpoint();if(e.target.checked){draft.items.forEach(z=>z.door=false);}o.door=e.target.checked;persist();renderAll();};
   host.querySelector('#draftDelete').onclick=()=>{checkpoint();draft.items=draft.items.filter(z=>z.id!==o.id);selected=draft.items[0]?.id||null;persist();renderAll();};
-  host.querySelector('#draftDuplicate').onclick=()=>{checkpoint();let v=cp(o);v.id=M.uid();v.x=clamp(v.x+36,8,W-v.w-8);v.y=clamp(v.y+30,8,H-v.h-8);v.door=false;v.segments=v.segments.map(s=>({...s,id:M.uid()}));draft.items.push(v);selected=v.id;persist();renderAll();};
+  host.querySelector('#draftDuplicate').onclick=()=>{checkpoint();let v=cp(o);v.id=M.uid();v.x=clamp(v.x+36,8,W-v.w-8);v.y=clamp(v.y+30,8,H-v.h-8);v.door=false;v.verified=false;v.segments=v.segments.map(s=>({...s,id:M.uid()}));draft.items.push(v);selected=v.id;persist();renderAll();};
   host.querySelectorAll('[data-remove-segment]').forEach(b=>b.onclick=()=>{checkpoint();o.segments=o.segments.filter(s=>s.id!==b.dataset.removeSegment);persist();renderAll();});
   host.querySelectorAll('[data-segprofile]').forEach(b=>b.onchange=()=>{let s=o.segments.find(s=>s.id===b.dataset.segprofile);if(s){checkpoint();s.profile=b.value;persist();renderAll();}});
  }
@@ -125,7 +127,7 @@ function editor({project,photos,host,goBack,save,approved}){
   if(drag.kind==='draw'||drag.kind==='ruler'){drag.bx=pt.x;drag.by=pt.y;renderSvg();return;}
   let o=drag.o,dx=pt.x-drag.start.x,dy=pt.y-drag.start.y;
   if(drag.kind==='move'){o.x=clamp(drag.orig.x+dx,0,W-o.w);o.y=clamp(drag.orig.y+dy,0,H-o.h);}
-  if(drag.kind==='size'){o.w=clamp(drag.orig.w+dx,60,W-o.x);o.h=clamp(drag.orig.h+dy,80,H-o.y);if(draft.feetPerPixel){o.physicalW=o.w*draft.feetPerPixel;o.physicalH=o.h*draft.feetPerPixel;}}
+  if(drag.kind==='size'){o.w=clamp(drag.orig.w+dx,60,W-o.x);o.h=clamp(drag.orig.h+dy,80,H-o.y);if(draft.feetPerPixel){o.physicalW=o.w*draft.feetPerPixel;o.physicalH=o.h*draft.feetPerPixel;}o.verified=false;}
   if(drag.kind==='segment'){let s=drag.s;let t=s.direction==='v'?(pt.x-o.x)/o.w:(pt.y-o.y)/o.h;s.t=clamp(t,.04,.96);}
   renderSvg();
  });
@@ -133,7 +135,7 @@ function editor({project,photos,host,goBack,save,approved}){
   if(!drag)return;const d=drag;drag=null;
   if(d.kind==='draw'){
    const x=Math.min(d.ax,d.bx),y=Math.min(d.ay,d.by),w=Math.abs(d.bx-d.ax),h=Math.abs(d.by-d.ay);
-   if(w>=35 && h>=55){checkpoint();let o={id:M.uid(),x,y,w,h,type:d.shape,physicalW:draft.feetPerPixel?+(w*draft.feetPerPixel).toFixed(3):4,physicalH:draft.feetPerPixel?+(h*draft.feetPerPixel).toFixed(3):7,profile:'1x2',segments:[],door:false};draft.items.push(o);selected=o.id;persist();setTool('select');}
+   if(w>=35 && h>=55){checkpoint();let o={id:M.uid(),x,y,w,h,type:d.shape,physicalW:draft.feetPerPixel?+(w*draft.feetPerPixel).toFixed(3):0,physicalH:draft.feetPerPixel?+(h*draft.feetPerPixel).toFixed(3):0,verified:false,profile:'1x2',segments:[],door:false};draft.items.push(o);selected=o.id;persist();setTool('select');}
   }else if(d.kind==='ruler'){
     const pixels=Math.hypot(d.bx-d.ax,d.by-d.ay);let feet=clampN(host.querySelector('#draftRef').value,.1,100,4);
     if(pixels>15){draft.feetPerPixel=feet/pixels;draft.referenceFeet=feet;persist();setTool('select');}
@@ -146,24 +148,36 @@ function editor({project,photos,host,goBack,save,approved}){
  host.querySelector('#draftOpacity').onchange=()=>persist();
  host.querySelector('#draftRef').onchange=ev=>{draft.referenceFeet=clampN(ev.target.value,.1,100,4);persist();};
  host.querySelector('#draftUndo').onclick=()=>{if(!prior.length)return;draft.items=prior.pop();selected=draft.items[0]?.id||null;persist();renderAll();};
- host.querySelector('#draftSuggest').onclick=()=>{if(draft.items.length && !confirm('¿Reemplazar el dibujo actual con una propuesta basada en las medidas existentes?'))return;checkpoint();const vals=project.openings||[],total=vals.reduce((s,x)=>s+x.w,0);let x=65;const space=Math.min(40,280/Math.max(1,vals.length-1));draft.items=vals.map((o,i)=>{let w=clamp(o.w/Math.max(1,total)*710,100,290);let v={id:M.uid(),x,y:155,w,h:435,type:o.type,physicalW:o.w,physicalH:o.h,door:!!o.door,profile:o.profile||'1x2',segments:cp(o.segments||[]).map(s=>({...s,id:M.uid()}))};x+=w+space;return v;});selected=draft.items[0]?.id||null;persist();renderAll();};
+ host.querySelector('#draftSuggest').onclick=()=>{if(draft.items.length && !confirm('¿Reemplazar el dibujo actual con una propuesta basada en las medidas existentes?'))return;checkpoint();const vals=project.openings||[];if(!vals.length){alert('Este proyecto no tiene openings anteriores. Dibuja los nuevos sobre la foto.');return;}const total=vals.reduce((s,x)=>s+x.w,0);let x=65;const space=Math.min(40,280/Math.max(1,vals.length-1));draft.items=vals.map((o,i)=>{let w=clamp(o.w/Math.max(1,total)*710,100,290);let v={id:M.uid(),x,y:155,w,h:435,type:o.type,physicalW:o.w,physicalH:o.h,door:!!o.door,verified:false,profile:o.profile||'1x2',segments:cp(o.segments||[]).map(s=>({...s,id:M.uid()}))};x+=w+space;return v;});selected=draft.items[0]?.id||null;persist();renderAll();};
  host.querySelector('#draftClose').onclick=goBack;
  host.querySelector('#draftApprove').onclick=()=>{
    if(!draft.items.length){alert('Dibuja por lo menos un opening.');return;}
+   if(project.kind==='field' && !draft.sourcePhotoId){alert('Para Desde fotografías, selecciona una foto del proyecto como referencia.');return;}
    if(draft.items.some(o=>!o.physicalW||!o.physicalH||o.physicalH<=0)){alert('Verifica todas las medidas antes de aprobar.');return;}
+   if(project.kind==='field' && draft.items.some(o=>!o.verified)){alert('Marca las medidas de todos los openings como verificadas en campo antes de aprobar.');return;}
    const doors=draft.items.filter(x=>x.door).length;
    if(doors>1){alert('Confirma qué opening lleva la puerta.');return;}
+   const doorsNotFitting=draft.items.filter(o=>o.door).some(o=>{
+     const W=o.physicalW,H=o.physicalH,dw=3,dh=80/12;
+     if(W<dw)return true;
+     if(o.type!=='arch')return H<dh;
+     const radius=W/2,spring=H-radius;
+     return spring+Math.sqrt(Math.max(0,radius*radius-(dw/2)**2))<dh;
+   });
+   if(project.kind==='field'&&doorsNotFitting){alert('La puerta nominal de 36 × 80 pulgadas NO cabe dentro de la geometría medida. Ajusta el opening o documenta la puerta aprobada antes de continuar.');return;}
    const bad=draft.items.some(o=>o.type==='arch'&&o.physicalH<o.physicalW/2);
    if(bad){alert('Algún arco tiene altura menor que el radio de su curvatura. Corrige su geometría.');return;}
-   const pwidth=project.house.porchW,pier=+project.pier||1.25,sum=draft.items.reduce((s,o)=>s+o.physicalW,0)+Math.max(0,draft.items.length-1)*pier;
-   if(sum>pwidth+.01 && !confirm('Los openings y pilares superan el ancho del muro. ¿Aprobar como medición pendiente de confirmar?'))return;
+   const pwidth=+project.house.porchW||0,pier=+project.pier||0,sum=draft.items.reduce((s,o)=>s+o.physicalW,0)+Math.max(0,draft.items.length-1)*pier;
+   if(pwidth>0 && sum>pwidth+.01 && !confirm('Los openings y pilares superan el ancho del muro. ¿Aprobar como medición pendiente de confirmar?'))return;
    if(!confirm('¿Aprobar esta revisión? El plano actualizará Medidas, 3D y el takeoff del proyecto. Verifica las dimensiones en campo.'))return;
    const rev=(project.approvedDrawing?.revision||0)+1;
-   const canonical=draft.items.map(o=>({id:o.id,type:o.type,w:+o.physicalW,h:+o.physicalH,door:!!o.door,profile:o.profile||'1x2',segments:cp(o.segments),photoBox:{x:o.x,y:o.y,w:o.w,h:o.h}}));
+   const canonical=draft.items.map(o=>({id:o.id,type:o.type,w:+o.physicalW,h:+o.physicalH,door:!!o.door,profile:o.profile||'1x2',segments:cp(o.segments),verified:!!o.verified,photoBox:{x:o.x,y:o.y,w:o.w,h:o.h}}));
    project.approvedDrawing={revision:rev,approvedAt:Date.now(),photoId:draft.sourcePhotoId,items:cp(canonical),geometry:cp(draft.items),feetPerPixel:draft.feetPerPixel||null,source:'manually-traced'};
    project.openings=canonical;
    project.drawingDraft.revisionBasedOn=rev;
-   project.house.porchW=Math.max(project.house.porchW,sum+.5);
+   project.house.porchW=Math.max(project.house.porchW||0,sum+.5);
+   project.house.archWallH=Math.max(project.house.archWallH||0,...canonical.map(o=>o.h+.5));
+   project.designStatus='approved';project.workflow='3d';
    save();approved(rev);
  };
  host.querySelector('#draftExport').onclick=()=>{

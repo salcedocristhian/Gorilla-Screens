@@ -8,7 +8,7 @@
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
-  function defaultProject() {
+  function demoTemplate() {
     return {
       v: 1,
       id: uid(),
@@ -36,9 +36,31 @@
     };
   }
 
+  /** New field jobs NEVER inherit a test house, openings or roof. */
+  function emptyProject() {
+    return {
+      v: 2, kind: 'field', id: uid(), createdAt: Date.now(), updatedAt: Date.now(),
+      workflow: 'photos', address: '', client: { name: '', phone: '', email: '' },
+      salesperson: '', notes: '',
+      house: { leftWingW: 0, leftWindows: 0, porchW: 0, porchDepth: 0,
+        archWallH: 0, garageW: 0, garageDoorW: 0, frontWindowW: 0, evCharger: false, palms: false },
+      openings: [], pier: 0, topScreen: { on: false, length: 0, depth: 0 },
+      gutter: { superOn: false, superLen: 0, existingRemain: 0, downspoutNew: false },
+      frameColor: 'bronze', mesh: '18×14 fiberglass charcoal',
+      drawingDraft: null, approvedDrawing: null, roofDraft: null, roofDesign: null,
+      designStatus: 'awaiting-photos',
+      quote: { rate: 0, extras: [], lang: 'es', number: '' }
+    };
+  }
+  const defaultProject = emptyProject;
+  function hasApprovedGeometry(p) {
+    return !!(p && p.kind === 'field' && p.approvedDrawing &&
+      Array.isArray(p.approvedDrawing.items) && p.approvedDrawing.items.length &&
+      p.designStatus === 'approved');
+  }
   function demoProject() {
-    const p = defaultProject();
-    p.id = 'demo-22743';
+    const p = demoTemplate();
+    p.id = 'demo-22743'; p.kind = 'demo'; p.designStatus = 'example';
     p.address = '22743 SW 56th Ave, Boca Raton, FL 33433';
     p.client.name = '[Nombre del cliente]';
     p.house.evCharger = true;
@@ -59,7 +81,7 @@
       dimsEs: fmt(o.w) + ' × ' + fmt(o.h) + (o.type === 'arch' ? ' arco' : ' rect.'),
       sqft: openingArea(o)
     }));
-    if (p.topScreen.on) {
+    if (p.topScreen?.on && p.topScreen.length > 0 && p.topScreen.depth > 0) {
       const r=p.roofDesign, W=p.topScreen.length, D=p.topScreen.depth;
       let sf=W*D, label='Top screen';
       if(r?.status==='approved-conceptual' && r.style==='mansard' && r.inset>0 && r.inset*2<Math.min(W,D)) {
@@ -87,7 +109,9 @@
 
   // ---------- layout del muro de openings ----------
   function layout(p) {
-    const W = p.house.porchW, n = p.openings.length, sum = p.openings.reduce((s, o) => s + o.w, 0);
+    const W = Number(p.house.porchW)||0, n = p.openings.length;
+    if (!n) return { W, pier:Number(p.pier)||0, end:0, items:[], doorIdx:-1, warn:[] };
+    const sum = p.openings.reduce((s, o) => s + o.w, 0);
     const pier = Math.max(0.5, Number(p.pier) || 1);
     let end = (W - sum - pier * (n - 1)) / 2;
     const warn = [];
@@ -109,13 +133,23 @@
     const b = s.replace(/-/g, '+').replace(/_/g, '/');
     return JSON.parse(decodeURIComponent(escape(atob(b))));
   }
-  function normalize(p) { // fills fields added in later versions
-    const d = defaultProject();
+  function normalize(p) { // Never populate missing geometry from the demonstration project.
+    if (!p || typeof p !== 'object') throw new Error('Project missing');
+    // Legacy data without a kind are preserved as legacy, never silently replaced.
+    const d = p.kind === 'demo' || p.id === 'demo-22743' ? demoTemplate() : emptyProject();
     const out = Object.assign({}, d, p);
-    ['house', 'topScreen', 'gutter', 'quote', 'client'].forEach(k => { out[k] = Object.assign({}, d[k], p[k] || {}); });
-    if (!Array.isArray(out.openings) || !out.openings.length) out.openings = d.openings;
+    out.kind = p.kind || (p.id === 'demo-22743' ? 'demo' : 'legacy');
+    ['house', 'topScreen', 'gutter', 'quote', 'client'].forEach(k => {
+      out[k] = Object.assign({}, d[k], p[k] || {});
+    });
+    out.openings = Array.isArray(p.openings) ? p.openings.map(o => Object.assign({}, o)) : [];
+    if (out.kind === 'field') {
+      out.approvedDrawing = p.approvedDrawing || null;
+      out.designStatus = p.designStatus || (out.approvedDrawing ? 'approved' : 'awaiting-photos');
+    }
     return out;
   }
 
-  window.GSSModel = { FRAME_COLORS, uid, defaultProject, demoProject, openingArea, areas, quoteTotals, money, fmt, fmtPlain, split, layout, encodeShare, decodeShare, normalize };
+  window.GSSModel = { FRAME_COLORS, uid, emptyProject, defaultProject, demoProject, hasApprovedGeometry,
+    openingArea, areas, quoteTotals, money, fmt, fmtPlain, split, layout, encodeShare, decodeShare, normalize };
 })();
