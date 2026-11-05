@@ -28,7 +28,7 @@
         { type: 'arch', w: 4, h: 7, door: false }
       ],
       pier: 1.25,
-      topScreen: { on: true, length: 16, depth: 2.5 },
+      topScreen: { on: true, length: 16, depth: 2 },
       gutter: { superOn: true, superLen: 16, existingRemain: 2, downspoutNew: true },
       frameColor: 'bronze',
       mesh: '',
@@ -42,7 +42,7 @@
     p.address = '22743 SW 56th Ave, Boca Raton, FL 33433';
     p.client.name = '[Nombre del cliente]';
     p.house.evCharger = true;
-    p.notes = 'Proyecto de ejemplo. Arcos 4×7 (3), top screen 16′ × 2′-6″, super gutter 16′ en fascia, 2 gutters existentes se quedan, downspout nuevo color frame.';
+    p.notes = 'Proyecto de ejemplo. Arcos 4×7 (3), top screen de un solo panel 16′ × 2′ sin soportes, super gutter 16′ en fascia, 2 gutters existentes se quedan, downspout nuevo color frame.';
     return p;
   }
 

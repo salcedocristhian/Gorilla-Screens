@@ -288,8 +288,7 @@
         const y = AWH + 0.03, za = fasciaZ + (P.gutter.superOn ? 0.68 : 0.35), zb = -0.25, x0 = 0, x1 = PW;
         const tb = (a, b, c, d, e, f) => sBox(a, b, c, d, e, f);
         tb(x0, x1, y, y + FD, za, za + F); tb(x0, x1, y, y + FD, zb - F, zb); tb(x0, x0 + F, y, y + FD, za, zb); tb(x1 - F, x1, y, y + FD, za, zb);
-        const bays = Math.max(1, Math.ceil(PW / 4));
-        for (let i = 1; i < bays; i++) { const x = x0 + (x1 - x0) * i / bays; tb(x - F / 2, x + F / 2, y, y + FD, za, zb); }
+        // one continuous panel: perimeter frame only, no intermediate supports
         const mg = new T.PlaneGeometry(x1 - x0, zb - za); const mm = new T.Mesh(mg, M.meshTop); mm.rotation.x = -Math.PI / 2; mm.position.set((x0 + x1) / 2, y + FD / 2, (za + zb) / 2); screens.add(mm);
       }
       this._views();

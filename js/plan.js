@@ -109,15 +109,12 @@
       col(BLK); lw(0.012);
       doc.rect(X(0), Z(-0.6), len * s, 0.6 * s); col(GRY); font(5.5); doc.text('EXIST. FASCIA / ROOF EDGE', X(len / 2), Z(-0.6) - 0.05, { align: 'center' }); col(BLK);
       doc.rect(X(0), Z(dep), len * s, 1.0 * s); font(5.5); doc.text('EXIST. ARCH WALL BELOW', X(len / 2), Z(dep) + 1.0 * s + 0.1, { align: 'center' });
-      const bays = Math.max(1, Math.ceil(len / 4));
       col(LRED); lw(0.003); meshRect(X(0), X(len), Z(0), Z(dep), 0.06);
       col(RED); lw(0.018); doc.rect(X(0), Z(0), len * s, dep * s);
-      lw(0.012); for (let i = 1; i < bays; i++) { const x = X(len * i / bays); doc.line(x, Z(0), x, Z(dep)); }
       if (P.gutter.superOn) { lw(0.01); doc.setLineDashPattern([0.06, 0.04], 0); doc.line(X(len - Math.min(len, P.gutter.superLen)), Z(0) - 0.03, X(len), Z(0) - 0.03); doc.setLineDashPattern([], 0); }
       dimH(X(0), X(len), Z(dep) + 1.0 * s + 0.24, ftin(len) + ' (F.V.)');
       dimV(X(0) - 0.15, Z(0), Z(dep), ftin(dep));
-      dimH(X(0), X(len / bays), Z(-0.6) - 0.22, ftin(len / bays) + ' O.C. TYP.');
-      leader(X(len * 0.5 / bays), Z(dep / 2), X(len) + 0.2, Z(dep / 2) - 0.25, ['NEW TOP SCREEN PANEL', '1"x2" FRAME + MULLIONS, ' + FC, 'SCREEN MESH ' + (P.mesh || '[MESH TYPE]'), Math.round(len * dep) + ' SQ FT'], RED);
+      leader(X(len * 0.25), Z(dep / 2), X(len) + 0.2, Z(dep / 2) - 0.25, ['NEW TOP SCREEN - ONE PANEL', '1"x2" PERIMETER FRAME, ' + FC, 'NO INTERMEDIATE SUPPORTS', 'SCREEN MESH ' + (P.mesh || '[MESH TYPE]'), Math.round(len * dep) + ' SQ FT'], RED);
       title(ox, Z(dep) + 1.0 * s + 0.72, 4, 'TOP SCREEN PLAN', sl);
     })();
     (function porchPlan() {
@@ -151,7 +148,7 @@
       const N = [
         'PROVIDE NEW 1"x2" ALUMINUM FRAME, ' + FC + ' FINISH, ONE CONTINUOUS PIECE AROUND EACH OPENING' + (nArch ? ', ROLLED TO THE ARCH RADIUS AT ARCHED OPENINGS.' : '.'),
         'SCREEN MESH: ' + (P.mesh || '[MESH TYPE]') + ', INSTALLED WITH SPLINE, TIGHT AND WRINKLE-FREE.',
-        P.topScreen.on ? 'NEW TOP SCREEN PANEL ' + ftin(P.topScreen.length) + ' x ' + ftin(P.topScreen.depth) + ' BETWEEN TOP OF ARCH WALL AND EXIST. FASCIA, 1"x2" FRAME WITH MULLIONS @ ' + ftin(P.topScreen.length / Math.max(1, Math.ceil(P.topScreen.length / 4))) + ' O.C.' : '',
+        P.topScreen.on ? 'NEW TOP SCREEN: ONE CONTINUOUS PANEL ' + ftin(P.topScreen.length) + ' x ' + ftin(P.topScreen.depth) + ' BETWEEN TOP OF ARCH WALL AND EXIST. FASCIA, 1"x2" PERIMETER FRAME ONLY - NO INTERMEDIATE / PERPENDICULAR SUPPORTS.' : '',
         P.gutter.superOn ? 'NEW ' + Math.round(P.gutter.superLen) + ' LF SUPER GUTTER ON EXIST. FASCIA (INSIDE THE ENCLOSURE), COLOR TO MATCH FRAME.' : '',
         P.gutter.existingRemain ? '(' + P.gutter.existingRemain + ') EXISTING REGULAR GUTTER(S) TO REMAIN.' : '',
         P.gutter.downspoutNew ? 'REPLACE DOWNSPOUT WITH NEW, SAME LOCATION AND POSITION, COLOR TO MATCH FRAME.' : '',
@@ -218,7 +215,7 @@
       const za = fasciaZ + (P.gutter.superOn ? 0.68 : 0.35), zb = -0.25;
       lw(0.02); doc.line(X(zb), Y(AWH + 0.08), X(za), Y(AWH + 0.08));
       lw(0.012); doc.rect(X(zb), Y(AWH + 0.083), FR * s, (1 / 12) * s); doc.rect(X(za) - FR * s, Y(AWH + 0.083), FR * s, (1 / 12) * s);
-      leader(X((za + zb) / 2), Y(AWH + 0.08), X((za + zb) / 2) + 0.4, Y(10.25), ['NEW TOP SCREEN: 1"x2" FRAME + MESH', 'FASTEN TO WALL CAP & GUTTER/FASCIA PER ENGINEER'], RED);
+      leader(X((za + zb) / 2), Y(AWH + 0.08), X((za + zb) / 2) + 0.4, Y(10.25), ['NEW TOP SCREEN (ONE PANEL): 1"x2" PERIMETER', 'FRAME + MESH, FASTEN PER ENGINEER'], RED);
       dimH(X(zb), X(za), Y(7.6) + 0.35, ftin(Math.round(Math.abs(za - zb) * 24) / 24) + ' CLEAR (F.V.)');
       title(1.0, 9.55, 7, 'SECTION B - TOP SCREEN & GUTTER', '1" = 1\'-0"');
     })();

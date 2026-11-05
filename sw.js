@@ -1,5 +1,5 @@
 /* Service worker: network first, cache as fallback, so the app opens with weak signal in the field. */
-const CACHE = 'gss-v1';
+const CACHE = 'gss-v2';
 const SHELL = ['./', './index.html', './css/app.css', './js/model.js', './js/storage.js', './js/scene3d.js', './js/plan.js', './js/quote.js', './js/app.js', './assets/gorilla-logo.png', './assets/icon-192.png', './manifest.webmanifest',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {})); self.skipWaiting(); });

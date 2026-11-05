@@ -11,7 +11,7 @@
     const out = [];
     out.push(es ? `Screens nuevos en (${n}) openings con frame 1×2 de aluminio de una pieza, color ${c}.` : `New screens at (${n}) openings with one-piece 1×2 aluminum frame, ${c}.`);
     if (door) out.push(es ? 'Puerta de screen con bisagras, manija y cierre.' : 'Screen door with hinges, pull handle and closer.');
-    if (P.topScreen.on) out.push(es ? `Top screen ${Mo.fmt(P.topScreen.length)} × ${Mo.fmt(P.topScreen.depth)} entre el muro y la fascia.` : `Top screen ${Mo.fmt(P.topScreen.length)} × ${Mo.fmt(P.topScreen.depth)} between wall and fascia.`);
+    if (P.topScreen.on) out.push(es ? `Top screen de un solo panel ${Mo.fmt(P.topScreen.length)} × ${Mo.fmt(P.topScreen.depth)} entre el muro y la fascia, sin soportes intermedios.` : `One-panel top screen ${Mo.fmt(P.topScreen.length)} × ${Mo.fmt(P.topScreen.depth)} between wall and fascia, no intermediate supports.`);
     if (P.gutter.superOn) out.push(es ? `Super gutter nuevo de ${Math.round(P.gutter.superLen)}′ en la fascia, color del frame.` : `New ${Math.round(P.gutter.superLen)}′ super gutter on fascia, frame color.`);
     if (P.gutter.existingRemain) out.push(es ? `${P.gutter.existingRemain} gutter(s) existente(s) se quedan.` : `${P.gutter.existingRemain} existing gutter(s) to remain.`);
     if (P.gutter.downspoutNew) out.push(es ? 'Downspout nuevo, mismo lugar y posición, color del frame.' : 'New downspout, same location and position, frame color.');
