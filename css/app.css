@@ -177,3 +177,15 @@ table.sq tr.tot td{font-weight:700;color:var(--text);border-bottom:0}
 .ref-door-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.ref-door-grid label{color:var(--sub);font-size:12px;display:flex;flex-direction:column;gap:5px}.ref-door-grid input{min-width:0;width:100%;min-height:44px;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--text);font-size:16px}.ref-check{display:flex;gap:12px;align-items:start;padding:11px 2px;border-bottom:1px solid var(--line);font-size:13px;min-height:44px}.ref-check input{width:20px;height:20px;accent-color:#0071e3;flex:0 0 auto}.ref-ok{background:#e8f7e9;color:#145526;padding:10px;border-radius:10px;font-size:13px;line-height:1.5}@media(prefers-color-scheme:dark){.ref-profile[aria-pressed=true]{background:#103452;color:#a2d2ff}.ref-ok{background:#124126;color:#9defac}}
 
 .ref-details{margin:12px 0}.ref-details summary{cursor:pointer;padding:12px;background:var(--field);border-radius:11px;min-height:44px;font-size:13px;font-weight:600}.ref-details figure{margin:10px 0}.ref-details img{width:100%;height:auto;max-height:540px;object-fit:contain;background:white;border-radius:8px}.ref-details figcaption{font-size:12px;color:var(--sub);margin:6px 0}
+
+/* V16 Field pilot: no inherited sample, photo-first clean iPhone operation */
+.field-start{border:1px solid rgba(0,113,227,.13);background:var(--card)}
+.field-start h2{font-size:19px;margin:0 0 9px;letter-spacing:-.02em}
+.field-start .lead{line-height:1.48;margin-bottom:13px}
+.field-start .btn{margin-top:7px}
+.field-steps{white-space:nowrap;font-size:10px;font-weight:700;color:var(--accent);background:var(--field);padding:7px;border-radius:10px}
+.field-summary{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--sub);padding:9px 0 14px}
+.field-measure-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.field-measure-row b{font-size:14px}.field-measure-row small{display:block;color:var(--sub);margin-top:4px;font-size:12px}
+.field-measure-row> b{text-align:right;white-space:nowrap}
+@media(max-width:600px){.field-start{padding:16px}.field-steps{display:none}}

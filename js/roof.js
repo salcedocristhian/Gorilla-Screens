@@ -6,7 +6,7 @@
  const cp=v=>JSON.parse(JSON.stringify(v));
  const fmt=v=>M.fmt(+v||0), n=(v,def)=>Number.isFinite(+v)?+v:def, clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
  function init(p){
-  if(!p.roofDraft){p.roofDraft={version:1,style:p.roofDesign?.style||'flat',width:p.topScreen?.length||16,depth:p.topScreen?.depth||2,rise:1.5,inset:1,bays:[],profile:'2x2',edgeProfile:'2x2',photoId:'',photoOpacity:.25,updatedAt:Date.now()};}
+  if(!p.roofDraft){p.roofDraft={version:1,style:p.roofDesign?.style||'flat',width:p.kind==='field'?(p.topScreen?.length||p.house?.porchW||0):(p.topScreen?.length||16),depth:p.kind==='field'?(p.topScreen?.depth||0):(p.topScreen?.depth||2),rise:1.5,inset:1,bays:[],profile:'2x2',edgeProfile:'2x2',photoId:'',photoOpacity:.25,updatedAt:Date.now()};}
   p.roofDraft.bays||=[.5];return p.roofDraft;
  }
  function surface(p){const r=p.roofDraft||p.roofDesign||{};const W=n(r.width,16), D=n(r.depth,2),rise=n(r.rise,0),ins=n(r.inset,1);
@@ -34,7 +34,7 @@
   function render(){
    $$('[data-style]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.style===R.style)));
    $('#roofRise').disabled=R.style==='flat';$('#roofInset').disabled=R.style!=='mansard';
-   const W=n(R.width,16), D=n(R.depth,2), In=n(R.inset,1),rise=n(R.rise,1.5),broken=R.style==='mansard'&&(In*2>=Math.min(W,D));
+   const W=Math.max(.5,n(R.width,.5)), D=Math.max(.5,n(R.depth,.5)), In=n(R.inset,1),rise=n(R.rise,1.5),broken=R.style==='mansard'&&(In*2>=Math.min(W,D));
    const sx=PW/W,sy=PH/D, xi=clamp(In/W,0,.48)*PW,yi=clamp(In/D,0,.48)*PH;
    const bg=photo()?.url||'';const pic=bg?`<image href="${bg}" x="${X0}" y="${Y0}" width="${PW}" height="${PH}" preserveAspectRatio="xMidYMid meet" opacity="${R.photoOpacity??.25}"/>`:'';
    const outline=R.style==='mansard'&&!broken?`<rect x="${X0+xi}" y="${Y0+yi}" width="${PW-2*xi}" height="${PH-2*yi}" fill="rgba(0,113,227,.11)" stroke="#40576c" stroke-width="4"/><path d="M${X0},${Y0} L${X0+xi},${Y0+yi} M${X0+PW},${Y0} L${X0+PW-xi},${Y0+yi} M${X0},${Y0+PH} L${X0+xi},${Y0+PH-yi} M${X0+PW},${Y0+PH} L${X0+PW-xi},${Y0+PH-yi}" fill="none" stroke="#4f3d2c" stroke-width="5"/>`:R.style==='gable'?`<line x1="${X0}" y1="${Y0+PH/2}" x2="${X0+PW}" y2="${Y0+PH/2}" stroke="#4f3d2c" stroke-width="7"/><text x="${X0+PW-5}" y="${Y0+PH/2-11}" fill="#334155" text-anchor="end" font-size="22">RIDGE</text>`:'';
@@ -56,9 +56,10 @@
   $('#roofUndo').onclick=()=>{if(!state.length)return;const old=state.pop();Object.keys(R).forEach(k=>delete R[k]);Object.assign(R,old);for(const [id,key] of [['roofW','width'],['roofD','depth'],['roofRise','rise'],['roofInset','inset']])$('#'+id).value=R[key];persist();render();};
   $('#roofBack').onclick=goBack;
   $('#roofApprove').onclick=()=>{if(R.style==='mansard'&&R.inset*2>=Math.min(R.width,R.depth)){alert('El retiro de mansard no cabe en las dimensiones del techo.');return;}
+   if(R.width<=0||R.depth<=0){alert('Introduce el largo y profundidad real del techo. No se puede aprobar un techo con medidas vacías.');return;}
    const msg='¿Aprobar el trazado de techo como geometría conceptual? Los anclajes y perfiles siguen pendientes de revisión estructural.';if(!confirm(msg))return;
    const revision=(project.roofDesign?.revision||0)+1;project.roofDesign={...cp(R),revision,approvedAt:Date.now(),status:'approved-conceptual',surfaceSqFt:surface({roofDraft:R})};
-   project.topScreen.on=true;project.topScreen.length=R.width;project.topScreen.depth=R.depth;project.house.porchW=R.width;save();approved(revision);};
+   project.topScreen.on=true;project.topScreen.length=R.width;project.topScreen.depth=R.depth;if(project.kind!=='field')project.house.porchW=R.width;save();approved(revision);};
   render();
  }
  window.GSSRoofEditor={editor,init,surface};

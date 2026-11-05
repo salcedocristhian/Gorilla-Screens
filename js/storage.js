@@ -6,7 +6,7 @@
     if (dbp) return dbp;
     dbp = new Promise((res) => {
       if (!('indexedDB' in window)) { memory = { projects: new Map(), photos: new Map() }; return res(null); }
-      const r = indexedDB.open(DB, VER);
+      let r;try{r=indexedDB.open(DB, VER);}catch(e){memory={projects:new Map(),photos:new Map()};return res(null);}
       r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains('projects')) d.createObjectStore('projects', { keyPath: 'id' }); if (!d.objectStoreNames.contains('photos')) { const s = d.createObjectStore('photos', { keyPath: 'id' }); s.createIndex('project', 'projectId'); } };
       r.onsuccess = () => res(r.result);
       r.onerror = () => { memory = { projects: new Map(), photos: new Map() }; res(null); };

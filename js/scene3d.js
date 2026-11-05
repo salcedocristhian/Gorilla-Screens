@@ -69,9 +69,82 @@
       s.add(sun); s.add(sun.target);
     }
 
+    // ------------------------------------------------------------------ field projects
+    // Purposefully contains no roofed house, driveway, default arches or garage.
+    // Only the approved geometry from THIS project may enter this scene.
+    _buildField(P) {
+      if (!M_.hasApprovedGeometry(P)) throw new Error('Project 2D geometry has not been approved');
+      if (this.root) {this.scene.remove(this.root);this.root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&o.material._own)o.material.dispose();});}
+      const root=this.root=new T.Group();this.scene.add(root);
+      this.land=new T.Group();this.palmsG=new T.Group();this.screens=new T.Group();this.newWork=new T.Group();this.beforeOnly=new T.Group();this.existing=new T.Group();
+      [this.land,this.palmsG,this.screens,this.newWork,this.beforeOnly,this.existing].forEach(g=>root.add(g));
+      const frameColor=(M_.FRAME_COLORS[P.frameColor]||M_.FRAME_COLORS.bronze).hex;
+      const mat=(color,opacity=1)=>{const m=new T.MeshStandardMaterial({color,roughness:.62,metalness:.13,transparent:opacity<1,opacity,side:T.DoubleSide,depthWrite:opacity===1});m._own=true;return m;};
+      const metal=mat(frameColor),mesh=mat('#23292a',.24),solid=mat(frameColor),slab=mat('#bdbab3'),grid=mat('#e2e7eb');
+      const box=(g,x,y,z,w,h,d,m)=>{const b=new T.Mesh(new T.BoxGeometry(Math.max(.015,w),Math.max(.015,h),Math.max(.015,d)),m);b.position.set(x,y,z);b.castShadow=true;g.add(b);return b;};
+      const line=(a,b,width=.09,depth=.10,m=metal)=>{const dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],len=Math.hypot(dx,dy,dz);if(len<.005)return;const obj=new T.Mesh(new T.BoxGeometry(len,width,depth),m);obj.position.set((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);obj.quaternion.setFromUnitVectors(new T.Vector3(1,0,0),new T.Vector3(dx,dy,dz).normalize());obj.castShadow=true;this.screens.add(obj);};
+      const archY=(o,x)=>{if(o.type!=='arch')return o.h;const r=o.w/2,sp=o.h-r,dx=x-r;return sp+Math.sqrt(Math.max(0,r*r-dx*dx));};
+      const outline=o=>{const pts=[[0,0],[0,o.type==='arch'?o.h-o.w/2:o.h]];if(o.type==='arch'){const r=o.w/2,sp=o.h-r;for(let k=0;k<=48;k++){const a=Math.PI-k*Math.PI/48;pts.push([r+r*Math.cos(a),sp+r*Math.sin(a)]);}}else pts.push([o.w,o.h]);pts.push([o.w,0]);return pts;};
+      const paper=this.land;
+      let x=0, maxH=0;
+      const approved=P.approvedDrawing.items;
+      const gap=Number(P.pier)>0?Number(P.pier):.6; // unknown field gaps are intentionally schematic
+      approved.forEach((o,i)=>{
+        const w=Math.max(.1,Number(o.w)||0),h=Math.max(.1,Number(o.h)||0);
+        const physical={...o,w,h,type:o.type==='arch'?'arch':'rect'};
+        const shape=new T.Shape();const pts=outline(physical);
+        shape.moveTo(pts[0][0]+x,pts[0][1]);for(let k=1;k<pts.length;k++)shape.lineTo(pts[k][0]+x,pts[k][1]);shape.closePath();
+        const fill=new T.Mesh(new T.ShapeGeometry(shape),mesh);fill.position.z=.018;this.screens.add(fill);
+        for(let k=1;k<pts.length;k++)line([x+pts[k-1][0],pts[k-1][1],.05],[x+pts[k][0],pts[k][1],.05],.115,.12);
+        line([x,0,.05],[x+w,0,.05],.10,.12);
+        const spring=h-w/2;
+        (o.segments||[]).forEach(s=>{const t=Math.max(.03,Math.min(.97,Number(s.t)||.5));const sz=Math.max(.08,(parseFloat(String(s.profile||'1x2').split('x')[0])||1)/12);
+          if(s.direction==='v')line([x+w*t,0,.08],[x+w*t,archY(physical,w*t),.08],sz,.12);
+          else {const yy=h*t;let l=0,r=w;if(physical.type==='arch'&&yy>spring){const hw=Math.sqrt(Math.max(0,(w/2)**2-(yy-spring)**2));l=w/2-hw;r=w/2+hw;}if(r-l>.02)line([x+l,yy,.08],[x+r,yy,.08],sz,.12);}
+        });
+        if(o.door){
+          const dw=Math.min(3,w-.2),dh=80/12;
+          const shoulder=physical.type==='arch'?spring+Math.sqrt(Math.max(0,(w/2)**2-(dw/2)**2)):h;
+          if(dw>0 && dh<=shoulder+.0001){
+            const dl=x+(w-dw)/2,dr=dl+dw;
+            [[dl,0,dl,dh],[dr,0,dr,dh],[dl,dh,dr,dh],[dl,dh*.43,dr,dh*.43],[dl,.5,dr,.5]].forEach(v=>line([v[0],v[1],.13],[v[2],v[3],.13],.11,.14));
+            box(this.screens,(dl+dr)/2,.23,.11,dw,.46,.025,solid);
+            box(this.screens,dr-.18,dh*.47,.22,.12,.38,.17,metal);
+          }else{
+            // A visible nonstructural door-location marker; never forge a fitting 80-inch door.
+            line([x+w*.5,0,.22],[x+w*.5,Math.min(h,2),.22],.05,.05,mat('#d08c30'));
+          }
+        }
+        maxH=Math.max(maxH,h);x+=w+(i<approved.length-1?gap:0);
+      });
+      const totalW=Math.max(1,x),depth=P.roofDesign?.status==='approved-conceptual'?Number(P.roofDesign.depth)||2:2;
+      box(paper,totalW/2,-.12,-depth/2,totalW+3,.18,depth+4,slab);
+      const lines=20;for(let i=0;i<=lines;i++){const xx=totalW*(i/lines);box(paper,xx,-.018,-depth/2,.015,.012,depth+3,grid);}
+      const roof=P.roofDesign?.status==='approved-conceptual'?P.roofDesign:null;
+      if(roof && roof.width>0 && roof.depth>0){
+        const RW=Number(roof.width),D=Number(roof.depth),Y=maxH+.25, R=Math.max(0,Number(roof.rise)||0),style=roof.style||'flat';
+        const roofMat=mat('#23292a',.28);
+        const vertices=[];const tri=(a,b,c)=>vertices.push(...a,...b,...c);const quad=(a,b,c,d)=>{tri(a,b,c);tri(a,c,d);};
+        const A=[0,Y,0],B=[RW,Y,0],C=[RW,Y,-D],D0=[0,Y,-D];
+        if(style==='gable'&&R>0){const a=[0,Y+R,-D/2],b=[RW,Y+R,-D/2];quad(A,B,b,a);quad(a,b,C,D0);[[A,B],[B,C],[C,D0],[D0,A],[a,b]].forEach(v=>line(v[0],v[1],.15,.15));}
+        else if(style==='mansard' && R>0){const ins=Math.max(.02,Math.min(Number(roof.inset)||.3,Math.min(RW,D)/2-.02));const ai=[ins,Y+R,-ins],bi=[RW-ins,Y+R,-ins],ci=[RW-ins,Y+R,-D+ins],di=[ins,Y+R,-D+ins];quad(A,B,bi,ai);quad(B,C,ci,bi);quad(C,D0,di,ci);quad(D0,A,ai,di);quad(ai,bi,ci,di);[[A,B],[B,C],[C,D0],[D0,A],[ai,bi],[bi,ci],[ci,di],[di,ai]].forEach(v=>line(v[0],v[1],.15,.15));}
+        else{quad(A,B,C,D0);[[A,B],[B,C],[C,D0],[D0,A]].forEach(v=>line(v[0],v[1],.15,.15));}
+        const ge=new T.BufferGeometry();ge.setAttribute('position',new T.Float32BufferAttribute(vertices,3));ge.computeVertexNormals();const panel=new T.Mesh(ge,roofMat);this.screens.add(panel);
+        (roof.bays||[]).forEach(t=>{const bx=RW*Math.max(.02,Math.min(.98,Number(t)||.5));line([bx,Y,0],[bx,Y,-D],.09,.10);});
+      }
+      this.dims={LW:0,PW:totalW,GW:0,D:depth,PZ:-depth,fasciaZ:0,cx:totalW/2};
+      this._views();
+      this.VIEWS.frente={p:[totalW/2,Math.max(3,maxH*.62),Math.max(15,totalW*1.2)],t:[totalW/2,maxH/2,0]};
+      this.VIEWS.arcos={p:[totalW/2,maxH/2,Math.max(11,totalW*.9)],t:[totalW/2,maxH/2,0]};
+      this.VIEWS.aerea={p:[totalW*.75,maxH+Math.max(17,totalW),Math.max(10,totalW)],t:[totalW/2,0,-depth/2]};
+      this.VIEWS.top={p:[totalW/2,maxH+24,0],t:[totalW/2,maxH/2,-depth/2]};
+      this.apply();this.sun.target.position.set(totalW/2,0,0);this.sun.position.set(totalW/2-20,30,23);
+    }
+
     // ------------------------------------------------------------------ build
     build(P) {
       P = M_.normalize(P);
+      if(P.kind==='field'){this._buildField(P);return;}
       if (this.root) { this.scene.remove(this.root); this.root.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material._own) o.material.dispose(); }); }
       const root = this.root = new T.Group(); this.scene.add(root);
       const land = this.land = new T.Group(), palms = this.palmsG = new T.Group(), screens = this.screens = new T.Group(), newWork = this.newWork = new T.Group(), existing = this.existing = new T.Group();
