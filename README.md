@@ -1,74 +1,50 @@
-# Gorilla Screens — app de campo
+# Gorilla Screen Studio — V14 (functional field-design preview)
 
-Una app web para vendedores de **Gorilla Screening Solutions LLC**. El vendedor captura la dirección, las fotos y las medidas, y la app genera:
+This is an updated working copy of the supplied `Gorilla-Screens-main.zip`. The original project, photos, brand assets, quotations, IndexedDB project storage and Three.js scene architecture are retained.
 
-- **Modelo 3D** de la casa con los screens: antes y después, y 7 vistas.
-- **Área total en pie²**: arcos, rectangulares y top screen.
-- **Cotización PDF** por pie², con botones de $15, $20, $25 u Otro, extras y versión en español o inglés.
-- **Plano PDF de 3 hojas** estilo hoja de ingeniería, con logo, dirección, sello del ingeniero, notas y detalles. Rojo = trabajo nuevo.
-- **Link para el cliente** con el 3D y la cotización. El precio es opcional.
+## Run / publish
 
-Todo corre en el navegador. No hay servidor ni base de datos, y los proyectos se guardan en el dispositivo del vendedor.
+Serve the **contents** of this folder (not the surrounding ZIP) over HTTP(S). For local testing:
 
-## Publicar en GitHub Pages
-
-1. Crea un repositorio nuevo en GitHub, por ejemplo `gorilla-screens`.
-2. Sube **todo el contenido de esta carpeta** a la raíz del repo, incluido el archivo `.nojekyll`.
-   ```bash
-   git init
-   git add .
-   git commit -m "Gorilla Screens v1"
-   git branch -M main
-   git remote add origin https://github.com/TU-USUARIO/gorilla-screens.git
-   git push -u origin main
-   ```
-3. En GitHub, ve a **Settings → Pages → Source: Deploy from a branch → `main` / `(root)`** y guarda.
-4. En 1 o 2 minutos queda en `https://TU-USUARIO.github.io/gorilla-screens/`.
-5. En el iPhone, abre el link en Safari y toca **Compartir → Agregar a pantalla de inicio**. Queda como una app.
-
-Para probarla en tu computadora: `python3 -m http.server 8080` y abre `http://localhost:8080`. Tiene que abrirse desde un servidor, porque abriendo el archivo directamente no funciona.
-
-## Primer uso
-
-- **Ajustes** (el engrane en la pantalla de proyectos): nombre, dirección, teléfono, email, licencia e ingeniero de récord. Salen en el plano y en la cotización.
-- **Cargar proyecto de ejemplo**: abre 22743 SW 56th Ave con sus fotos y medidas.
-
-## Flujo del vendedor
-
-| Pestaña | Qué hace |
-|---|---|
-| Datos | Dirección, mapa satelital, botones a vista aérea y Street View, cliente, vendedor y notas |
-| Fotos | Lista guiada por categoría, con cámara directa |
-| Medidas | Openings (arco o rectangular, ancho y alto en pies y pulgadas, puerta), pilares, porche, top screen, gutters, color y malla. Pie² en vivo |
-| 3D | Antes y con screens, vistas, landscaping, palmas y captura |
-| Precio | Pie² × tarifa ($15, $20, $25 u Otro), extras, total y cotización PDF |
-| Entregar | Plano PDF, cotización, link para el cliente y exportar el proyecto |
-
-**Fórmula del arco:** área = W × (H − W/2) + π × (W/2)² / 2, donde H es la altura total del arco.
-
-## Límites actuales (v1)
-
-- **Capturas de Google:** el vendedor las toma y las sube. Automatizarlas requiere una API key de Google Maps Platform y un servidor, y sus términos restringen ese uso.
-- **Proyectos por dispositivo:** se usa **Exportar / Importar** para pasarlos entre teléfonos o a la oficina. Para compartir entre todo el equipo, el siguiente paso es Supabase o Firebase.
-- **Modelo 3D:** representa una casa tipo ala izquierda + porche de openings + garage. Las medidas de los openings, el porche, el top screen y los gutters son exactas a lo ingresado. El resto de la casa es aproximado y solo sirve de referencia visual.
-- **Sello del ingeniero:** el plano sale como **borrador**. El sello y las especificaciones de anclaje las pone el ingeniero de récord.
-- **Fotos de Google:** no subas capturas de Google a un repositorio público.
-
-## Estructura
-
-```
-index.html              shell de la app
-css/app.css             estilos (claro y oscuro, móvil primero)
-js/model.js             datos del proyecto, áreas, pies y pulgadas, link de cliente
-js/storage.js           IndexedDB (proyectos + fotos)
-js/scene3d.js           modelo 3D paramétrico (three.js r128)
-js/plan.js              plano PDF de 3 hojas (jsPDF)
-js/quote.js             cotización PDF
-js/app.js               pantallas y lógica
-sw.js                   cache para abrir con mala señal
-manifest.webmanifest    instalar en la pantalla de inicio
-assets/                 logo e íconos
-demo/                   fotos del proyecto de ejemplo
+```bash
+python3 -m http.server 8080
 ```
 
-Librerías por CDN, con versiones fijas: three.js r128, OrbitControls 0.128.0 y jsPDF 2.5.1.
+Open `http://localhost:8080`. To publish, place the folder contents at the GitHub Pages root and enable Pages. On iPhone, open in Safari and use Share → Add to Home Screen. Third-party Three.js and jsPDF scripts require a first online load.
+
+## New practical workflow
+
+1. **Projects**: find a project using the compact search box, add via `+`, import via upload icon.
+2. **Location**: enter address and search from the field icon. The map selector switches between aerial and street links; it does **not** circumvent Google Maps screenshot or storage restrictions.
+3. **Photos**: take or upload field photos and assign categories; an individual photo can be selected as a tracing reference.
+4. **Measurements → 2D editor**: `Abrir editor 2D` opens photo-backed SVG drafting. Select the photo, set opacity, draw arches or rectangular openings, move handles, calibrate from a known dimension, add/move/remove horizontal/vertical profiles, set 1×2 through 4×4, select screen door, review preliminary takeoff and approve a revision.
+5. **Measurements → Roof editor**: choose Flat, Mansard or Gable; edit width/depth/rise/mansard inset, drag/add/delete beams and approve an independent conceptual roof revision.
+6. **3D**: approved opening profiles and roof style feed the existing parametric scene. Reopen 3D after approval to rebuild. The house is approximate; a roof larger than the photographed 16×2 opening requires a separate site geometry survey and a fit-to-house review.
+7. **Deliver**: 11×17 conceptual PDF drawings with G-0 site/location/aerial reference, S-1 screen elevation/roof layout, S-2 typical details, and S-3 reference imagery. The actual aerial image appears only if an authorized photo was uploaded.
+
+## Technical boundaries — do not present as engineered plans
+
+- Camera and photo tracing are **manual / assisted**, not automatic AI photogrammetry. A photograph alone cannot establish reliable real-world dimensions. Scale calibration and field dimensions are required.
+- Profile selections, screen areas and roof styles are geometric concepts, **not structurally verified** for wind pressure, deflection, footings, anchors, splices, fasteners or supplier-approved spans.
+- The default 22743 project remains a 16'×2' horizontal screen opening with 7" dark-bronze *interior* super gutter, three existing arches, and existing white side gutters. A Mansard or Gable roof changes the scope; do not use the existing house geometry as a fabrication model without a measured site model and engineered details.
+- 36"×80" doors in 4'×7' semi-circular arch openings may not fit at the shoulders. Verify door clearances and as-built arch profiles.
+- Material quantities are preliminary; do not treat conceptual section diagrams as product approvals.
+- Photos and projects are stored locally in IndexedDB. No central login, cloud storage or automated external upload is configured.
+- Google Maps screenshot capture is intentionally **not** automated. Use authorized/user-owned reference images instead.
+- Installation manuals and isometric supplier PDFs have **not** been integrated: two PDFs mentioned in chat were not available in the uploaded project/container. Product-specific geometry, proprietary parts and manufacturer fasteners remain pending.
+
+## QA performed
+
+- JavaScript syntax checked across `js/*.js` and service worker.
+- In a sandboxed Chromium DOM, tested create project → measurements → prefill a 3-opening drawing → approve → roof editor → Mansard geometry change → approve. No JavaScript exceptions in those screens.
+- Visual browser test of the full Three.js 3D is still pending because local/remote navigation and CDN dependencies are blocked in the test environment. Evaluate on an actual iPhone before production.
+
+## Key files
+
+- `js/editor.js` — photo-backed vector opening editor
+- `js/roof.js` — interactive roof plan editor (Flat/Mansard/Gable)
+- `js/model.js` — project records and area calculations
+- `js/scene3d.js` — existing house and parametric screen scene
+- `js/plan.js` — architectural sheets / location references
+- `js/app.js` — screens, project navigation and workflows
+- `css/app.css` — touch-oriented responsive UI
