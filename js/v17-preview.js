@@ -2,10 +2,13 @@
    Does not reuse the demonstration property's house geometry. */
 (function(){
 'use strict';
-function mount(host,s){
+function mount(host,s,sitePhoto){
  const T=window.THREE;
  if(!T||!T.OrbitControls)throw Error('THREE or OrbitControls not available.');
  const W=+s.width,D=+s.depth,H=+s.height;
+ const site=window.GSSV17Engine.siteLayout(s);
+ host.dataset.houseReference=site.enabled?'true':'false';
+ host.dataset.photoReference=site.enabled&&sitePhoto?.url?String(sitePhoto.id):'';
  if(!(W>0&&D>0&&H>0))return {destroy(){}};
  const color=s.finish==='white'?0xe9ece9:0x3d3028;
  const renderer=new T.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
@@ -15,7 +18,7 @@ function mount(host,s){
  host.innerHTML='';host.appendChild(renderer.domElement);renderer.domElement.style.touchAction='none';
  const scene=new T.Scene();scene.background=new T.Color(0x91a5b4);
  const camera=new T.PerspectiveCamera(40,1,.2,1000);
- const span=Math.max(W,D,H);
+ const span=Math.max(W,D,H,site.enabled?site.width:0,site.enabled?site.depth:0);
  camera.position.set(W*.9+span*.50,H*.85+span*.75,D*1.25+span*.9);
  camera.lookAt(W/2,H*.6,D/2);
  const controls=new T.OrbitControls(camera,renderer.domElement);
@@ -29,7 +32,8 @@ function mount(host,s){
  const irpMat=new T.MeshStandardMaterial({color:0xd7dadd,roughness:.55,metalness:.15,transparent:true,opacity:.91,side:T.DoubleSide});
  const houseMat=new T.MeshStandardMaterial({color:0x7b8389,roughness:1,transparent:true,opacity:.40,side:T.DoubleSide});
  const floorMat=new T.MeshStandardMaterial({color:0xb8bfc4,roughness:1,side:T.DoubleSide});
- const objects=[];
+ const objects=[],extraMaterials=[],textures=[];
+ let dead=false;
  function mesh(geo,mat,x,y,z){const item=new T.Mesh(geo,mat);item.position.set(x,y,z);scene.add(item);objects.push(item);return item;}
  function beam(a,b,cross=.16,deep=.3,mat=frameMat){
   const v1=new T.Vector3(...a),v2=new T.Vector3(...b),diff=new T.Vector3().subVectors(v2,v1),len=diff.length();
@@ -56,9 +60,51 @@ function mount(host,s){
   return H;
  }
  const tiny=.012;
- // Ground and an intentionally neutral reference attachment plane, not an invented house reconstruction.
- mesh(new T.PlaneGeometry(W+6,D+6),floorMat,W/2,-.04,D/2).rotation.x=-Math.PI/2;
- plane([[0,0,-.55],[W,0,-.55],[W,H+1.5,-.55],[0,H+1.5,-.55]],houseMat);
+ // Ground supports both the proposal and the separate, contextual house footprint.
+ const back=site.enabled?site.depth:0;
+ mesh(new T.PlaneGeometry(Math.max(W,site.enabled?site.width:W)+8,D+back+8),floorMat,W/2,-.04,(D-back)/2).rotation.x=-Math.PI/2;
+ if(site.enabled){
+   // Simple, editable volume at the site-facing fascia — never a photogrammetric mesh.
+   const x0=site.x0,x1=site.x1,zFront=-.28,zRear=-site.depth-.28,eaves=site.fascia;
+   const houseBodyMat=new T.MeshStandardMaterial({color:0xcfd2ce,roughness:.93});
+   const houseRoofMat=new T.MeshStandardMaterial({color:0x657077,roughness:.87,metalness:.08,side:T.DoubleSide});
+   extraMaterials.push(houseBodyMat,houseRoofMat);
+   mesh(new T.BoxGeometry(site.width,Math.max(.1,eaves),site.depth),houseBodyMat,x0+site.width/2,eaves/2,-.28-site.depth/2);
+   if(site.roofType==='flat') {
+     mesh(new T.BoxGeometry(site.width+.9,.22,site.depth+.7),houseRoofMat,x0+site.width/2,eaves+.12,-.28-site.depth/2);
+   }else if(site.roofType==='gable'){
+     const ridge=eaves+site.roofRise,cx=(x0+x1)/2;
+     plane([[x0,eaves,zFront],[cx,ridge,zFront],[cx,ridge,zRear],[x0,eaves,zRear]],houseRoofMat);
+     plane([[cx,ridge,zFront],[x1,eaves,zFront],[x1,eaves,zRear],[cx,ridge,zRear]],houseRoofMat);
+     plane([[x0,eaves,zFront],[x1,eaves,zFront],[cx,ridge,zFront],[cx,ridge,zFront]],houseRoofMat);
+   }else{
+     const ridge=eaves+site.roofRise,cx=(x0+x1)/2,midZ=(zFront+zRear)/2;
+     plane([[x0,eaves,zFront],[cx,ridge,midZ],[cx,ridge,midZ],[x1,eaves,zFront]],houseRoofMat);
+     plane([[x0,eaves,zRear],[x1,eaves,zRear],[cx,ridge,midZ],[cx,ridge,midZ]],houseRoofMat);
+     plane([[x0,eaves,zFront],[x0,eaves,zRear],[cx,ridge,midZ],[cx,ridge,midZ]],houseRoofMat);
+     plane([[x1,eaves,zRear],[x1,eaves,zFront],[cx,ridge,midZ],[cx,ridge,midZ]],houseRoofMat);
+   }
+   // Project-owned photo is an upright reference plane; its perspective is not geometrically solved.
+   if(site.showPhoto && sitePhoto?.url){
+     const photoMaterial=new T.MeshBasicMaterial({transparent:true,opacity:.95,side:T.DoubleSide,depthWrite:false,color:0xffffff});
+     extraMaterials.push(photoMaterial);
+     const photoPlane=mesh(new T.PlaneGeometry(site.width,Math.max(.1,eaves)),photoMaterial,x0+site.width/2,eaves/2,-.275+.018);
+     photoPlane.renderOrder=3;
+     const loader=new T.TextureLoader();
+     loader.load(sitePhoto.url,tex=>{
+       if(dead){tex.dispose();return;}
+       tex.encoding=T.sRGBEncoding;
+       photoMaterial.map=tex;photoMaterial.needsUpdate=true;textures.push(tex);
+     },undefined,()=>{/* Keep neutral house if the source photo cannot be decoded. */});
+   }
+   // Existing fascia reference (not the proposed super gutter).
+   const fasciaMat=new T.MeshStandardMaterial({color:0x318d92,metalness:.3,roughness:.45});
+   extraMaterials.push(fasciaMat);
+   beam([x0,eaves,-.24],[x1,eaves,-.24],.13,.17,fasciaMat);
+ }else{
+   // Legacy visual aid only when the user has not selected any project-owned house context.
+   plane([[0,0,-.55],[W,0,-.55],[W,H+1.5,-.55],[0,H+1.5,-.55]],houseMat);
+ }
  for(let i=0;i<=bayCount;i++)if(!s.pictureView||i===0||i===bayCount)beam([W*i/bayCount,0,D],[W*i/bayCount,H,D],.22,.4);
  for(let side of [0,W])for(let j=0;j<sideCount;j++)beam([side,0,D*j/sideCount],[side,H,D*j/sideCount],.22,.4);
  // Top two separate profiles: upper roof 2x2, lower wall spline 1x2, both front and sides.
@@ -173,7 +219,6 @@ function mount(host,s){
   for(let x of [0,W])beam([x,H,0],[x,0,0],.14,.14);
  }
  controls.target.set(W/2,H*.55,D/2);controls.update();
- let dead=false;
  const resize=()=>{
   if(dead)return;
   const w=Math.max(180,host.clientWidth||600),h=Math.max(200,host.clientHeight||330);
@@ -184,7 +229,8 @@ function mount(host,s){
  const lost=e=>{e.preventDefault();dead=true;};
  renderer.domElement.addEventListener('webglcontextlost',lost);
  function cleanup(){if(dead)return;dead=true;if(ro)ro.disconnect();controls.dispose();objects.forEach(o=>o.geometry.dispose());
-  [frameMat,roofMat,wallMat,irpMat,houseMat,floorMat].forEach(m=>m.dispose());
+  [frameMat,roofMat,wallMat,irpMat,houseMat,floorMat,...extraMaterials].forEach(m=>m.dispose());
+  textures.forEach(t=>t.dispose());
   renderer.dispose();if(renderer.domElement.parentNode)renderer.domElement.parentNode.removeChild(renderer.domElement);
  }
  function loop(){if(dead)return;if(!host.isConnected){cleanup();return;}requestAnimationFrame(loop);controls.update();renderer.render(scene,camera);}

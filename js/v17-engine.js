@@ -19,12 +19,31 @@
     supplier:'Town & Country / ABC Outdoor Solutions',supplierPhone:'',supplierEmail:'',
     costs:{},laborPerSqft:null,overhead:null,targetMargin:null,revision:1,
     approvedOrder:null,siteSurvey:false,
-    match:{before:'',after:'',split:50,scale:100,x:0,y:0}
+    match:{before:'',after:'',split:50,scale:100,x:0,y:0},
+    site:{enabled:false,userDisabled:false,photoId:'',showPhoto:true,houseWidth:0,houseDepth:0,fasciaHeight:0,roofRise:3,roofType:'gable',offsetX:0,verified:false}
   }; }
   function get(p) { if(!p.studioV17){p.studioV17=defaults();if(p.frameColor==='bronze'||p.frameColor==='white')p.studioV17.finish=p.frameColor;}const d=defaults(); return Object.assign(d,p.studioV17,{
     costs:Object.assign({},d.costs,p.studioV17.costs||{}),
-    match:Object.assign({},d.match,p.studioV17.match||{})
+    match:Object.assign({},d.match,p.studioV17.match||{}),
+    site:Object.assign({},d.site,p.studioV17.site||{})
   });}
+  // Existing house is contextual geometry ONLY. No supplier takeoff is derived from it.
+  // Unset inputs are deliberately provisional and are never described as field measurements.
+  function siteLayout(s) {
+    const site=Object.assign({},defaults().site,s.site||{});
+    const W=Math.max(0,n(s.width)),H=Math.max(0,n(s.height)),D=Math.max(0,n(s.depth));
+    const width=n(site.houseWidth)>0?n(site.houseWidth):W+6;
+    const depth=n(site.houseDepth)>0?n(site.houseDepth):Math.max(10,Math.min(20,D*.65));
+    const fascia=n(site.fasciaHeight)>0?n(site.fasciaHeight):H;
+    const offsetX=n(site.offsetX);
+    const x0=(W-width)/2+offsetX;
+    const delta=n(site.fasciaHeight)>0&&H>0?round(fascia-H):null;
+    const estimated=!site.verified||!(n(site.houseWidth)>0&&n(site.houseDepth)>0&&n(site.fasciaHeight)>0);
+    return {enabled:site.enabled===true,width,depth,fascia,x0,x1:x0+width,depthEnd:-depth,
+      offsetX,delta,estimated,photoId:site.photoId||'',showPhoto:site.showPhoto!==false,
+      roofType:['flat','gable','hip'].includes(site.roofType)?site.roofType:'gable',
+      roofRise:Math.max(0,n(site.roofRise,3)),verified:site.verified===true};
+  }
   function geometry(s) {
     const W=n(s.width),D=n(s.depth),H=n(s.height),valid=W>0&&D>0&&H>0;
     const frontBays=valid?Math.max(1,Math.ceil(W/clamp(s.wallTarget,2,20))):0;
@@ -159,6 +178,7 @@
     // Keep approval stable across price-only edits; invalidate for changed geometry/cut rules.
     return JSON.stringify({revision:s.revision,width:s.width,depth:s.depth,height:s.height,verified:s.verified,roof:s.roof,
       mansardRise:s.mansardRise,mansardInset:s.mansardInset,irpDepth:s.irpDepth,pictureView:s.pictureView,
+      siteAttachment:{fasciaHeight:s.site?.fasciaHeight||0,verified:s.site?.verified||false,offsetX:s.site?.offsetX||0},
       finish:s.finish,mesh:s.mesh,supplier:s.supplier,costs:s.costs,doorBay:s.doorBay,doorHinge:s.doorHinge,doorSwing:s.doorSwing,postProfile:s.postProfile,beamProfile:s.beamProfile,crossProfile:s.crossProfile,
       topRoofProfile:s.topRoofProfile,topWallProfile:s.topWallProfile,chairProfile:s.chairProfile,bottomProfile:s.bottomProfile,
       chairHeight:s.chairHeight,doorCount:s.doorCount,doorWidth:s.doorWidth,doorHeight:s.doorHeight,
@@ -180,5 +200,5 @@
       totalCost:round(material+laborCost+overhead),
       sellingPrice:round((material+laborCost+overhead)/(1-margin/100))};
   }
-  window.GSSV17Engine={PROFILE_OPTIONS,FINISHES,defaults,get,geometry,doorLayout,frontRuns,segments,optimize,takeoff,signature,orderStatus,price,clone,round};
+  window.GSSV17Engine={PROFILE_OPTIONS,FINISHES,defaults,get,geometry,siteLayout,doorLayout,frontRuns,segments,optimize,takeoff,signature,orderStatus,price,clone,round};
 })();

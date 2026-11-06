@@ -9,7 +9,7 @@ const fmt=n=>Number(n||0).toFixed(2)+' ft';
 const download=(filename,blob)=>{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);};
 let active='design',previousPreview=null;
 function field(k,label,value,type='number',step='.25',extra=''){
- const props=type==='checkbox'?'type="checkbox" '+(value?'checked':''):'type="'+type+'" value="'+esc(value===null?'':value)+'" '+(type==='number'?'step="'+step+'" min="0"':'');
+ const props=type==='checkbox'?'type="checkbox" '+(value?'checked':''):'type="'+type+'" value="'+esc(value===null?'':value)+'" '+(type==='number'?'step="'+step+'" '+(k==='site-offsetX'?'':'min="0"'):'');
  return '<label class="v17-field"><span>'+esc(label)+'</span><input data-v17-key="'+esc(k)+'" '+props+' '+extra+'></label>';
 }
 function select(k,label,val,options){
@@ -17,11 +17,46 @@ function select(k,label,val,options){
 }
 function action(name,text,kind='sec'){return '<button class="btn '+kind+'" data-v17-action="'+name+'">'+text+'</button>';}
 function info(text){return '<div class="v17-note">'+text+'</div>';}
-function design(s,r,p){
+
+function siteReference(s,photos,p){
+ const site=E.siteLayout(s),raw=s.site||{},photo=photos.find(x=>x.id===site.photoId);
+ const available=photos.filter(x=>['porche','frente','street','detalles','aerea','openings','render'].includes(x.cat));
+ const photoOptions=[['','Choose a project photo'],...available.map(x=>[x.id,({porche:'Patio / interior',frente:'Facade',street:'Street',detalles:'Fascia / detail',aerea:'Aerial',openings:'Opening',render:'Render reference'}[x.cat]||x.cat)+' · '+new Date(x.createdAt).toLocaleDateString('en-US')])];
+ const refStatus=site.estimated?'Reference dimensions estimated':'Field dimensions marked verified';
+ const delta=(site.delta!==null&&Math.abs(site.delta)>.12)?
+  '<div class="v17-note v17-attach-warning"><strong>Fascia connection mismatch: '+Math.abs(site.delta).toFixed(2)+' ft.</strong> Proposed enclosure height and existing fascia are different. Verify the actual attachment before releasing plans or purchasing.</div>':'';
+ return '<section class="v17-site-reference" aria-label="Existing house reference">'+
+   '<div class="v17-site-header"><div><span class="cap">EXISTING SITE · REFERENCE ONLY</span><p>Diseña el enclosure sobre la casa, sin modelar la vivienda pieza por pieza.</p></div>'+
+   '<label class="v17-site-switch"><input type="checkbox" data-v17-site="enabled" '+(site.enabled?'checked':'')+'><span>Show house</span></label></div>'+
+   (!available.length?'<p class="v17-note">Todavía no hay fotos del proyecto. <a href="#/p/'+esc(p.id)+'/fotos">Agrega una foto del patio o de la fachada en Fotos</a>. La geometría no se inventa.</p>':'')+
+   '<div class="v17-site-primary">'+
+   (photo?'<img class="v17-site-thumb" src="'+esc(photo.url)+'" alt="Fotografía real seleccionada del proyecto">':'<div class="v17-site-thumb v17-site-empty">No site photo</div>')+
+   '<label class="v17-field v17-site-photo-field"><span>Site photo · from this project</span>'+
+   '<select data-v17-site="photoId">'+photoOptions.map(o=>'<option value="'+esc(o[0])+'" '+(o[0]===site.photoId?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select></label></div>'+
+   '<details class="v17-site-more"><summary>Adjust house reference / fascia connection <span>⌄</span></summary>'+
+   '<div class="v17-fields">'+
+   field('site-houseWidth','House facade width · ft (0 = estimate)',raw.houseWidth)+
+   field('site-houseDepth','House depth · ft (0 = estimate)',raw.houseDepth)+
+   field('site-fasciaHeight','Existing fascia elevation · ft',raw.fasciaHeight)+
+   field('site-offsetX','House horizontal offset · ft',raw.offsetX,'number','.25')+
+   select('site-roofType','Existing house roof sketch',raw.roofType,[['flat','Flat'],['gable','Gable'],['hip','Hip (simplified)']])+
+   field('site-roofRise','Roof rise sketch · ft',raw.roofRise)+
+   '</div><div class="v17-checkrow">'+
+   field('site-showPhoto','Project photo on facade plane',raw.showPhoto,'checkbox')+
+   field('site-verified','House attachment dimensions verified on site',raw.verified,'checkbox')+
+   '</div><div class="v17-btnrow">'+action('snap','Match enclosure height to fascia')+'</div>'+
+   '<p class="lead smalltext">The facade photograph is mapped to a flat reference plane. It is not photogrammetric reconstruction, a survey, or an engineering design. Confirm where the actual fascia, supports and slab occur.</p>'+
+   '</details>'+
+   '<div class="v17-site-foot"><span>● '+esc(refStatus)+'</span><span>House model excluded from enclosure takeoff</span></div>'+
+   delta+
+   '</section>';
+}
+function design(s,r,p,photos){
  const types=[['mansard','Mansard'],['flat','Flat screen'],['gable','Gable'],['irp','IRP Solid'],['mixed','Mixed IRP + Screen']];
  const profileOptions=vals=>vals.map(v=>[v,v.replace('x','×')]);
  return '<div class="v17-grid"><section class="card"><div class="v17-cardhead"><div><div class="cap">LIVE GEOMETRY</div><h2>Enclosure · 3D</h2></div><span class="v17-pill">Concept design</span></div>'+
    '<div id="v17-preview" class="v17-stage"><div class="v17-stage-empty">Introduce ancho, profundidad y altura para visualizar la estructura.</div></div>'+
+   siteReference(s,photos,p)+
    '<div class="v17-metrics"><div><b>'+fmt(r.geometry.W)+'</b><small>Front width</small></div><div><b>'+fmt(r.geometry.D)+'</b><small>Depth</small></div><div><b>'+fmt(r.geometry.H)+'</b><small>Wall height</small></div></div>'+
    info('Perfiles y conexiones son presets geométricos, sujetos a ingeniería de viento, anclajes y cimentación. Ninguna cota se infiere de las fotos.')+
    '</section><div><section class="card"><div class="cap">01 · DATOS DEL ENCLOSURE</div>'+
@@ -186,14 +221,29 @@ async function generatePDF(p,s,r,photos){
  txt('FRONT RECEIVER: '+s.topRoofProfile,rx,ry+rd+.3,9,true);
  txt('ROOF TYPE '+s.roof.toUpperCase()+'   | BIG BEAM '+s.beamProfile+'   | TRAVERSE '+s.crossProfile,rx,9.1,11,true);
  txt('Roof panel target ~'+s.roofTarget+' ft; framing schematic only. Engineer must check spans and sections.',rx,9.5,8);
- sheet('SP-101','SITE PLANNING / PROPERTY LOCATION');
- rectFrame(1.45,2.4,10.7,6.7);
- txt('PROPERTY SURVEY / LOT LIMITS: NOT PROVIDED BY APP',1.8,3.0,10,true);
- txt('No assumed property boundaries, zoning setbacks, slab or footing adequacy.',1.8,3.4,9);
- doc.setDrawColor(...blue);doc.setLineWidth(.024);const sw=Math.min(5,G.W*.12),sd=Math.min(3,G.D*.12);
- doc.rect(3.1,4.25,sw,sd);txt('PROPOSED ENCLOSURE FOOTPRINT',3.1,4.05,9,true,blue);
- txt(ft(G.W)+' x '+ft(G.D)+'  | '+G.footprint+' sq ft',3.1,4.25+sd+.32,9);
- txt(photos.some(x=>x.cat==='aerea')?'Aerial image is available in this project. Survey dimensions still required.':'No site aerial or survey included in this conceptual exhibit.',1.8,8.55,9);
+ sheet('SP-101','SITE PLAN / EXISTING HOUSE + PROPOSED ENCLOSURE');
+ txt('CONCEPTUAL RELATIVE LAYOUT / NOT A PROPERTY SURVEY',.9,1.92,11,true,[170,62,39]);
+ txt('No lot boundaries or setbacks inferred. Verify house fascia, slab, footing and attachments.',.9,2.23,9);
+ const existing=E.siteLayout(s),hasHouse=existing.enabled;
+ const leftLimit=hasHouse?Math.min(0,existing.x0):0;
+ const rightLimit=hasHouse?Math.max(G.W,existing.x1):G.W;
+ const extent=G.D+(hasHouse?existing.depth:0);
+ const planScale=Math.min(9.8/Math.max(.01,rightLimit-leftLimit),5.15/Math.max(.01,extent));
+ const originX=1.5-leftLimit*planScale,connectY=3.05+(hasHouse?existing.depth:0)*planScale;
+ if(hasHouse){
+   doc.setDrawColor(...grey);doc.setFillColor(224,225,222);
+   doc.rect(originX+existing.x0*planScale,connectY-existing.depth*planScale,
+     existing.width*planScale,existing.depth*planScale,'FD');
+   txt('EXISTING HOUSE - REFERENCE ONLY',originX+existing.x0*planScale,connectY-existing.depth*planScale-.12,8,true);
+ }
+ doc.setDrawColor(...blue);doc.setLineWidth(.034);
+ doc.rect(originX,connectY,G.W*planScale,G.D*planScale);
+ doc.line(originX,connectY,originX+G.W*planScale,connectY);
+ txt('FASCIA / SUPER GUTTER CONNECTION',originX,connectY-.15,8,true,blue);
+ txt('PROPOSED ENCLOSURE',originX+.09,connectY+.33,9,true,blue);
+ txt(ft(G.W)+' x '+ft(G.D)+'  | '+G.footprint+' sq ft',originX,connectY+G.D*planScale+.28,9);
+ txt(hasHouse?'Existing facade/photo positioning remains conceptual.':'No house context selected. Add a project-owned house photo in Studio.',.9,8.98,8);
+ txt('Actual survey, zoning setbacks and true roof/footing layout require field and engineering review.',.9,9.33,8);
  sheet('V-101','LAYOUT VISUALIZATION / PHOTO REFERENCES');
  txt('THESE IMAGES ARE PROJECT REFERENCES, NOT SURVEY-CALIBRATED RENDERS.',.86,1.65,8,true,[170,62,39]);
  async function photoData(photo){
@@ -215,7 +265,7 @@ async function generatePDF(p,s,r,photos){
      doc.addImage(url,props.fileType||'JPEG',x+(5.6-wi)/2,2.18+(3.3-hi)/2,wi,hi,undefined,'FAST');
    }catch(e){txt('Image cannot be embedded in PDF: '+photo.cat,x+.3,3.8,8);}
  }
- await showPhoto(photos.find(x=>x.cat==='frente'||x.cat==='porche')||null,.86,'EXISTING SITE / BEFORE');
+ await showPhoto(photos.find(x=>x.id===s.site?.photoId)||photos.find(x=>x.cat==='frente'||x.cat==='porche')||null,.86,'EXISTING SITE / BEFORE');
  await showPhoto(photos.find(x=>x.cat==='render')||null,6.8,'PROPOSED IMAGE / AFTER');
  txt('SCHEMATIC ISOMETRIC - NOT APPROVED ENGINEERING',.86,6,9,true);
  const xscale=Math.min(.19,5.9/Math.max(G.W,1)),zscale=Math.min(.12,3/Math.max(G.D,1)),yscale=Math.min(.28,2.5/Math.max(G.H,1));
@@ -244,22 +294,33 @@ async function generatePDF(p,s,r,photos){
 }
 function mount({project,photos,host,save,notify}){
  if(previousPreview){previousPreview.destroy();previousPreview=null;}
+ const hadSite=!!project.studioV17?.site;
  let s=E.get(project);project.studioV17=s;
+ const source=photos.find(x=>x.cat==='porche')||photos.find(x=>x.cat==='frente')||photos.find(x=>x.cat==='street');
+ const hadPhoto=!!s.site.photoId;
+ if(source&&!hadPhoto){
+   s.site.photoId=source.id;
+   if(!s.site.userDisabled)s.site.enabled=true;
+ }
  const store=()=>{project.studioV17=s;save();};
+ if(!hadSite||(source&&!hadPhoto))store();
  const tell=notify||((message)=>alert(message));
  function render(){
+   const detailsWasOpen=host.querySelector('.v17-site-more')?.open===true;
    if(previousPreview){previousPreview.destroy();previousPreview=null;}
    const r=E.takeoff(s);
-   const body={design:()=>design(s,r,project),match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project));
+   const body={design:()=>design(s,r,project,photos),match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project));
    host.innerHTML='<div class="v17-shell"><header class="v17-heading"><div><div class="cap">GORILLA SCREEN STUDIO · V17 WORKSPACE</div><h1>Design to Purchase</h1><p class="lead">Diseña, presenta, calcula y prepara compras — sin perder el control humano.</p></div><span class="v17-beta">FIELD PILOT</span></header>'+
     '<nav class="v17-nav" aria-label="Studio sections">'+[
     ['design','▧','Design'],['match','◐','Photo Match'],['docs','▤','Deliverables'],['buy','▦','Takeoff & Order']
    ].map(x=>'<button data-v17-tab="'+x[0]+'" '+(active===x[0]?'aria-current="page"':'')+'><span>'+x[1]+'</span>'+x[2]+'</button>').join('')+'</nav>'+body()+'</div>';
+   if(detailsWasOpen&&host.querySelector('.v17-site-more'))host.querySelector('.v17-site-more').open=true;
    host.querySelectorAll('[data-v17-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.v17Tab;render();});
    host.querySelectorAll('[data-v17-key]').forEach(input=>{
       input.onchange=()=>{
         let key=input.dataset.v17Key,value=input.type==='checkbox'?input.checked:input.value;
-        if(key==='stock24'||key==='stock30'){s.stocks[key==='stock24'?0:1]=Number(value)||0;}
+        if(key.startsWith('site-')){s.site[key.slice(5)]=input.type==='checkbox'?value:input.type==='number'?Number(value):value;}
+        else if(key==='stock24'||key==='stock30'){s.stocks[key==='stock24'?0:1]=Number(value)||0;}
         else if(key==='matchX'||key==='matchY'){s.match[key==='matchX'?'x':'y']=Number(value)||0;}
         else if(key==='doorWidthIn'||key==='doorHeightIn'){s[key==='doorWidthIn'?'doorWidth':'doorHeight']=(Number(value)||0)/12;}
         else if(key==='doorBay'){s.doorBay=value===''?null:Number(value);}
@@ -268,6 +329,15 @@ function mount({project,photos,host,save,notify}){
         if(key==='finish')project.frameColor=value;
         store();setTimeout(render,0);
       };
+   });
+   host.querySelectorAll('[data-v17-site]').forEach(input=>{
+     input.onchange=()=>{
+       const key=input.dataset.v17Site;
+       s.site[key]=input.type==='checkbox'?input.checked:
+         input.type==='number'?(input.value===''?0:Number(input.value)):input.value;
+       if(key==='enabled')s.site.userDisabled=!s.site.enabled;
+       store();setTimeout(render,0);
+     };
    });
    host.querySelectorAll('[data-v17-match]').forEach(input=>{
       input.value=s.match[input.dataset.v17Match]||input.value;
@@ -288,10 +358,25 @@ function mount({project,photos,host,save,notify}){
       b.disabled=true;
       try{
        const kind=b.dataset.v17Action,report=E.takeoff(s),valid=report.geometry.valid;
+       if(kind==='snap'){
+         const fascia=Number(s.site?.fasciaHeight);
+         if(!(fascia>0))throw Error('Primero introduce la elevación de fascia medida en campo.');
+         if(!s.site.verified&&!confirm('La elevación de fascia no está marcada como verificada. ¿Aplicarla solo como valor conceptual?'))return;
+         s.height=fascia;
+         s.verified=false; // Changes to connection geometry require project field review.
+         store();tell('Enclosure alineado con la referencia de fascia. Verifica dimensiones antes de comprar.');
+         setTimeout(render,0);return;
+       }
+
        if(kind==='csv'){if(!valid)throw Error('Introduce dimensiones primero.');download('Gorilla-Cutting-Plan-'+project.id+'.csv',generateCSV(s,report,project));}
        if(kind==='pdf'){const blob=await generatePDF(project,s,report,photos);download('Gorilla-Concept-Drawings-'+project.id+'.pdf',blob);}
        if(kind==='approve'){
          if(!valid||!s.verified)throw Error('Verifica y confirma las medidas de campo antes de aprobar.');
+         if(s.site?.enabled&&s.gutterEnabled&&(
+           !s.site.verified||!(Number(s.site.fasciaHeight)>0)||
+           Math.abs(Number(s.site.fasciaHeight)-Number(s.height))>.12
+         ))throw Error('La conexión house fascia / super gutter debe verificarse y coincidir con la altura del enclosure antes de aprobar.');
+
          if(report.unresolved.length)throw Error('Hay piezas mayores que la longitud comercial; resuelve splices/stock primero.');
          if(s.pictureView||s.roof==='irp'||s.roof==='mixed')throw Error('Se requiere revisión estructural y un schedule completo de componentes Picture View/IRP antes de aprobar materiales de compra.');
          if(E.doorLayout(s).issues.length)throw Error('La puerta no cabe en el panel seleccionado. Ajusta el ancho del panel, la altura o la cantidad de puertas antes de aprobar.');
@@ -317,7 +402,7 @@ function mount({project,photos,host,save,notify}){
       finally{b.disabled=false;}
    });
    if(active==='design'&&r.geometry.valid&&window.GSSV17Preview){
-      try{previousPreview=window.GSSV17Preview.mount(host.querySelector('#v17-preview'),s);}
+      try{previousPreview=window.GSSV17Preview.mount(host.querySelector('#v17-preview'),s,photos.find(x=>x.id===s.site?.photoId));}
       catch(e){console.warn('V17 preview unavailable',e); const stage=host.querySelector('#v17-preview');if(stage)stage.textContent='Vista 3D no disponible. Cálculos y documentos siguen accesibles.';}
    }
  }

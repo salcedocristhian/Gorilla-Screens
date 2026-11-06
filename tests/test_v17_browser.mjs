@@ -3,8 +3,9 @@ import {chromium} from 'playwright';
 const base='http://127.0.0.1:8765/';
 const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader']});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1,acceptDownloads:true});
-const pageErrors=[];
+const pageErrors=[],previewWarnings=[];
 page.on('pageerror',e=>pageErrors.push(e.message));
+page.on('console',msg=>{if(msg.type()==='warning'||msg.type()==='error')previewWarnings.push(msg.text());});
 try{
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.locator('[data-a="newphoto"]').click();
@@ -16,6 +17,7 @@ try{
  };
  await set('width',30);await set('depth',20);await set('height',8);
  await page.locator('#v17-preview canvas').waitFor({timeout:20000});
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-house-reference'),'false','New project has no invented existing house by default');
  await page.locator('[data-v17-key="doorWidthIn"]').fill('90');
  await page.locator('[data-v17-key="doorWidthIn"]').dispatchEvent('change');
  await page.getByText('Door needs adjustment:').waitFor();
@@ -52,6 +54,34 @@ try{
  await page.goto(base);
  await page.locator('[data-a="demo"]').click();
  await page.locator('a[href$="/studio"]').click();
+ // The opt-in V16 demonstration does not contain V17 rectangular-cage dimensions.
+ // Enter illustrative test dimensions; do not pretend photographs established field measurements.
+ await set('width',20);await set('depth',30);await set('height',10);
+ await page.waitForTimeout(2500);
+ if(!(await page.locator('#v17-preview canvas').count())){
+   throw Error('House context preview failed: '+(await page.locator('#v17-preview').innerText())+' | '+JSON.stringify(previewWarnings.slice(-12))+' | '+JSON.stringify(pageErrors));
+ }
+ await page.locator('#v17-preview canvas').waitFor({timeout:20000});
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-house-reference'),'true','Own-project photos automatically enable existing house context');
+ assert.ok(await page.locator('#v17-preview').getAttribute('data-photo-reference'),'Project photo is used, not a sample from another project');
+ const photoId=await page.locator('[data-v17-site="photoId"]').inputValue();
+ assert.ok(photoId,'Photo reference should be selected from project photo list');
+ await page.locator('.v17-site-more summary').click();
+ const oldHeight=Number(await page.locator('[data-v17-key="height"]').inputValue());
+ await page.locator('[data-v17-key="site-fasciaHeight"]').fill(String(oldHeight+1));
+ await page.locator('[data-v17-key="site-fasciaHeight"]').dispatchEvent('change');
+ await page.getByText('Fascia connection mismatch:').waitFor();
+ await page.locator('[data-v17-key="site-verified"]').check();
+ await page.locator('[data-v17-action="snap"]').click();
+ await page.waitForFunction(expected=>Number(document.querySelector('[data-v17-key="height"]')?.value)===expected,oldHeight+1);
+ assert.equal(Number(await page.locator('[data-v17-key="height"]').inputValue()),oldHeight+1,'Snap explicitly aligns the enclosure with existing house fascia');
+ await page.locator('[data-v17-site="enabled"]').uncheck();
+ await page.waitForFunction(()=>document.querySelector('#v17-preview')?.dataset.houseReference==='false');
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-house-reference'),'false','House layer can be hidden independently of the enclosure');
+ await page.locator('[data-v17-site="enabled"]').check();
+ await page.waitForFunction(()=>document.querySelector('#v17-preview')?.dataset.houseReference==='true');
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-house-reference'),'true');
+ await page.screenshot({path:'qa-v17-mobile-house-context.png',fullPage:true});
  await page.locator('[data-v17-tab="match"]').click();
  await page.locator('.v17-compare .v17-after').waitFor({timeout:20000});
  await page.screenshot({path:'qa-v17-mobile-photomatch.png',fullPage:true});
