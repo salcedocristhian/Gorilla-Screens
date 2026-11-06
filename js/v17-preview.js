@@ -11,12 +11,12 @@ function mount(host,s){
  const renderer=new T.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
  renderer.outputEncoding=T.sRGBEncoding;
- renderer.setClearColor(0xe8edf0,1);
+ renderer.setClearColor(0x91a5b4,1);
  host.innerHTML='';host.appendChild(renderer.domElement);renderer.domElement.style.touchAction='none';
- const scene=new T.Scene();scene.background=new T.Color(0xe9eef2);
+ const scene=new T.Scene();scene.background=new T.Color(0x91a5b4);
  const camera=new T.PerspectiveCamera(40,1,.2,1000);
  const span=Math.max(W,D,H);
- camera.position.set(W*.9+span*.25,H*.85+span*.6,D*1.25+span*.7);
+ camera.position.set(W*.9+span*.50,H*.85+span*.75,D*1.25+span*.9);
  camera.lookAt(W/2,H*.6,D/2);
  const controls=new T.OrbitControls(camera,renderer.domElement);
  controls.enableDamping=true;controls.dampingFactor=.07;controls.maxPolarAngle=Math.PI*.49;
@@ -27,8 +27,8 @@ function mount(host,s){
  const roofMat=new T.MeshStandardMaterial({color:0x7a9ba8,roughness:.75,metalness:.1,transparent:true,opacity:.18,side:T.DoubleSide,depthWrite:false});
  const wallMat=new T.MeshStandardMaterial({color:0x77a0ad,roughness:.6,transparent:true,opacity:.12,side:T.DoubleSide,depthWrite:false});
  const irpMat=new T.MeshStandardMaterial({color:0xd7dadd,roughness:.55,metalness:.15,transparent:true,opacity:.91,side:T.DoubleSide});
- const houseMat=new T.MeshStandardMaterial({color:0xbfc2bd,roughness:1,transparent:true,opacity:.52,side:T.DoubleSide});
- const floorMat=new T.MeshStandardMaterial({color:0xd7d5cc,roughness:1,side:T.DoubleSide});
+ const houseMat=new T.MeshStandardMaterial({color:0x7b8389,roughness:1,transparent:true,opacity:.40,side:T.DoubleSide});
+ const floorMat=new T.MeshStandardMaterial({color:0xb8bfc4,roughness:1,side:T.DoubleSide});
  const objects=[];
  function mesh(geo,mat,x,y,z){const item=new T.Mesh(geo,mat);item.position.set(x,y,z);scene.add(item);objects.push(item);return item;}
  function beam(a,b,cross=.16,deep=.3,mat=frameMat){
