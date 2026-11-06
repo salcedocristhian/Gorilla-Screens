@@ -21,7 +21,7 @@
     approvedOrder:null,siteSurvey:false,
     match:{before:'',after:'',split:50,scale:100,x:0,y:0}
   }; }
-  function get(p) { if(!p.studioV17) p.studioV17=defaults();const d=defaults(); return Object.assign(d,p.studioV17,{
+  function get(p) { if(!p.studioV17){p.studioV17=defaults();if(p.frameColor==='bronze'||p.frameColor==='white')p.studioV17.finish=p.frameColor;}const d=defaults(); return Object.assign(d,p.studioV17,{
     costs:Object.assign({},d.costs,p.studioV17.costs||{}),
     match:Object.assign({},d.match,p.studioV17.match||{})
   });}
