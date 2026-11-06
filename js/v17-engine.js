@@ -20,7 +20,7 @@
     costs:{},laborPerSqft:null,overhead:null,targetMargin:null,revision:1,
     approvedOrder:null,siteSurvey:false,
     match:{before:'',after:'',split:50,scale:100,x:0,y:0},
-    site:{enabled:false,photoId:'',showPhoto:true,houseWidth:0,houseDepth:0,fasciaHeight:0,roofRise:3,roofType:'gable',offsetX:0,verified:false}
+    site:{enabled:false,userDisabled:false,photoId:'',showPhoto:true,houseWidth:0,houseDepth:0,fasciaHeight:0,roofRise:3,roofType:'gable',offsetX:0,verified:false}
   }; }
   function get(p) { if(!p.studioV17){p.studioV17=defaults();if(p.frameColor==='bronze'||p.frameColor==='white')p.studioV17.finish=p.frameColor;}const d=defaults(); return Object.assign(d,p.studioV17,{
     costs:Object.assign({},d.costs,p.studioV17.costs||{}),
