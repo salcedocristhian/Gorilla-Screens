@@ -7,6 +7,8 @@ function mount(host,s,sitePhoto){
  if(!T||!T.OrbitControls)throw Error('THREE or OrbitControls not available.');
  const W=+s.width,D=+s.depth,H=+s.height;
  const site=window.GSSV17Engine.siteLayout(s);
+ host.dataset.houseReference=site.enabled?'true':'false';
+ host.dataset.photoReference=site.enabled&&sitePhoto?.url?String(sitePhoto.id):'';
  if(!(W>0&&D>0&&H>0))return {destroy(){}};
  const color=s.finish==='white'?0xe9ece9:0x3d3028;
  const renderer=new T.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
