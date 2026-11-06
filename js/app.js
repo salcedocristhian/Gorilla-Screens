@@ -153,6 +153,12 @@
       if(p.approvedDrawing?.photoId)p.approvedDrawing.photoId=idMap[p.approvedDrawing.photoId]||'';
       if(p.roofDraft?.photoId)p.roofDraft.photoId=idMap[p.roofDraft.photoId]||'';
       if(p.roofDesign?.photoId)p.roofDesign.photoId=idMap[p.roofDesign.photoId]||'';
+      // Project-specific V17 context images must follow the imported project's new photo IDs.
+      // Never let a photo reference resolve against another customer's IndexedDB record.
+      if(p.studioV17?.site?.photoId)p.studioV17.site.photoId=idMap[p.studioV17.site.photoId]||'';
+      if(p.studioV17?.match?.before)p.studioV17.match.before=idMap[p.studioV17.match.before]||'';
+      if(p.studioV17?.match?.after)p.studioV17.match.after=idMap[p.studioV17.match.after]||'';
+
       await St.saveProject(p); for(const ph of parsedPhotos)await St.savePhoto(ph);
       location.hash = '#/p/' + p.id + '/datos';
     } catch (err) { toast('Archivo no válido'); }
