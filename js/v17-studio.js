@@ -296,12 +296,14 @@ function mount({project,photos,host,save,notify}){
  if(previousPreview){previousPreview.destroy();previousPreview=null;}
  const hadSite=!!project.studioV17?.site;
  let s=E.get(project);project.studioV17=s;
- if(!hadSite){
-   const source=photos.find(x=>x.cat==='porche')||photos.find(x=>x.cat==='frente')||photos.find(x=>x.cat==='street');
-   if(source){s.site.enabled=true;s.site.photoId=source.id;}
+ const source=photos.find(x=>x.cat==='porche')||photos.find(x=>x.cat==='frente')||photos.find(x=>x.cat==='street');
+ const hadPhoto=!!s.site.photoId;
+ if(source&&!hadPhoto){
+   s.site.photoId=source.id;
+   if(!s.site.userDisabled)s.site.enabled=true;
  }
  const store=()=>{project.studioV17=s;save();};
- if(!hadSite)store();
+ if(!hadSite||(source&&!hadPhoto))store();
  const tell=notify||((message)=>alert(message));
  function render(){
    const detailsWasOpen=host.querySelector('.v17-site-more')?.open===true;
@@ -333,6 +335,7 @@ function mount({project,photos,host,save,notify}){
        const key=input.dataset.v17Site;
        s.site[key]=input.type==='checkbox'?input.checked:
          input.type==='number'?(input.value===''?0:Number(input.value)):input.value;
+       if(key==='enabled')s.site.userDisabled=!s.site.enabled;
        store();setTimeout(render,0);
      };
    });
