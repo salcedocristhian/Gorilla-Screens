@@ -42,8 +42,8 @@ function design(s,r,p){
    select('chairProfile','Chair rail profile',s.chairProfile,profileOptions(['2x2','2x3']))+
    field('chairHeight','Chair rail height · feet (0 = off)',s.chairHeight)+
    field('doorCount','Single doors · quantity',s.doorCount,'number','1')+
-   field('doorWidth','Door width · feet',s.doorWidth)+field('doorHeight','Door height · feet',s.doorHeight)+
-   field('gutterSize','Super gutter size · inches',s.gutterSize,'number','1')+
+   field('doorWidthIn','Door width · inches',Math.round(s.doorWidth*12),'number','1')+field('doorHeightIn','Door height · inches',Math.round(s.doorHeight*12),'number','1')+
+   select('gutterSize','Super gutter size',s.gutterSize,[[5,'5 inches'],[7,'7 inches']])+
    field('downspouts','Downspouts · quantity',s.downspouts,'number','1')+
    '</div><div class="v17-checkrow">'+field('pictureView','Picture View · preliminary opening mode',s.pictureView,'checkbox')+
    field('gutterEnabled','Include house fascia super gutter',s.gutterEnabled,'checkbox')+'</div>'+
@@ -232,6 +232,7 @@ function mount({project,photos,host,save,notify}){
         let key=input.dataset.v17Key,value=input.type==='checkbox'?input.checked:input.value;
         if(key==='stock24'||key==='stock30'){s.stocks[key==='stock24'?0:1]=Number(value)||0;}
         else if(key==='matchX'||key==='matchY'){s.match[key==='matchX'?'x':'y']=Number(value)||0;}
+        else if(key==='doorWidthIn'||key==='doorHeightIn'){s[key==='doorWidthIn'?'doorWidth':'doorHeight']=(Number(value)||0)/12;}
         else if(input.type==='number'){s[key]=value===''?0:Number(value);}
         else s[key]=value;
         if(key==='finish')project.frameColor=value;
