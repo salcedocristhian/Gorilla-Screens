@@ -41,12 +41,18 @@ function design(s,r,p){
    select('topWallProfile','Lower wall spline channel',s.topWallProfile,profileOptions(['1x2','2x2']))+
    select('chairProfile','Chair rail profile',s.chairProfile,profileOptions(['2x2','2x3']))+
    field('chairHeight','Chair rail height · feet (0 = off)',s.chairHeight)+
-   field('doorCount','Single doors · quantity',s.doorCount,'number','1')+
+   field('doorCount','Screen doors · quantity',s.doorCount,'number','1')+
    field('doorWidthIn','Door width · inches',Math.round(s.doorWidth*12),'number','1')+field('doorHeightIn','Door height · inches',Math.round(s.doorHeight*12),'number','1')+
+   select('doorBay','Door position · front wall',s.doorBay??'',[['','Auto · central bay'],...Array.from({length:r.geometry.frontBays},(_,i)=>[i,'Panel '+(i+1)+' · from left'])])+
+   select('doorHinge','Hinges · viewed from outside',s.doorHinge,[['left','Left · default'],['right','Right']])+
+   select('doorSwing','Door swing',s.doorSwing,[['outward','Outward · default'],['inward','Inward']])+
+
    select('gutterSize','Super gutter size',s.gutterSize,[[5,'5 inches'],[7,'7 inches']])+
    field('downspouts','Downspouts · quantity',s.downspouts,'number','1')+
    '</div><div class="v17-checkrow">'+field('pictureView','Picture View · preliminary opening mode',s.pictureView,'checkbox')+
-   field('gutterEnabled','Include house fascia super gutter',s.gutterEnabled,'checkbox')+'</div>'+
+   field('gutterEnabled','Include house fascia super gutter',s.gutterEnabled,'checkbox')+
+   field('doorOpen','Show door open in 3D (60°)',s.doorOpen,'checkbox')+'</div>'+
+   (E.doorLayout(s).issues.length?info('<strong>Door needs adjustment:</strong> '+E.doorLayout(s).issues.map(esc).join(' ')):'')+
    info('Default: top horizontal 2×2 for roof screen framing, immediately below 1×2 for wall screen — on front AND side walls. Profile lengths are counted independently.')+
    '<div class="v17-metrics"><div><b>'+r.geometry.frontBays+'</b><small>Front bays</small></div><div><b>'+r.geometry.postCount+'</b><small>Posts (concept)</small></div><div><b>'+r.geometry.meshArea+' ft²</b><small>Mesh area (gross)</small></div></div></section></div></div>';
 }
@@ -100,6 +106,7 @@ function purchasing(s,r,p){
    '<div class="v17-metrics"><div><b>'+r.rows.length+'</b><small>Profile types</small></div><div><b>'+r.rows.reduce((t,x)=>t+x.bars.length,0)+'</b><small>Commercial bars</small></div><div><b>'+fmt(r.rows.reduce((t,x)=>t+x.purchased,0))+'</b><small>Purchase length</small></div></div>'+
    table+(r.unresolved.length?info('<b>BLOCKED:</b> '+r.unresolved.length+' continuous pieces exceed configured commercial stock. Confirm lengths, approved splices or an alternate supplier; do not order automatically.'):'')+
    (unsupported?info('<b>PRELIMINARY ONLY:</b> Picture View or solid IRP roof requires an engineered profile/connection or panel schedule before its purchasing list can be approved. The current takeoff is not complete for that system.'):'')+
+   (E.doorLayout(s).issues.length?info('<b>DOOR FIT ERROR:</b> '+E.doorLayout(s).issues.map(esc).join(' ')+' Correct the opening before approving a cut list.'):'')+
    '<div class="v17-btnrow">'+action('csv','↓ Export full cutting plan CSV')+action('approve','✓ Approve purchase list','')+'</div>'+
    '<hr class="v17-rule"><div class="cap">ESTIMATE · PRIVATE COMPANY RATES</div><div class="v17-fields">'+field('laborPerSqft','Labor · $ per developed ft²',s.laborPerSqft)+
    field('overhead','Overhead / equipment / permits · $',s.overhead)+field('targetMargin','Target gross margin · %',s.targetMargin,'number','1')+'</div>'+priceTxt+
@@ -145,7 +152,29 @@ async function generatePDF(p,s,r,photos){
  txt('HOUSE / FASCIA',boxX,boxY-.17,9);txt('FRONT '+ft(G.W),boxX,boxY+d+.24,9,true);txt('DEPTH '+ft(G.D),boxX+w+.2,boxY+d/2,9);
  let ey=6.4,ew=Math.min(9.3,G.W*scale),eh=2.6;rectFrame(boxX,ey,ew,eh);
  for(let i=1;i<G.frontBays;i++)line(boxX+ew*i/G.frontBays,ey,boxX+ew*i/G.frontBays,ey+eh);
- line(boxX,ey+eh*.64,boxX+ew,ey+eh*.64);
+ const elDoors=E.doorLayout(s);
+ const doorBottom=ey+eh,doorScale=ew/G.W;
+ const chairY=doorBottom-eh*Math.min(G.H,Math.max(0,Number(s.chairHeight)))/G.H;
+ if(s.chairHeight>0&&s.chairHeight<G.H) {
+   let from=0;
+   for(const door of elDoors.placements){
+     if(door.x0>from)line(boxX+from*doorScale,chairY,boxX+door.x0*doorScale,chairY);
+     from=door.x1;
+   }
+   if(from<G.W)line(boxX+from*doorScale,chairY,boxX+ew,chairY);
+ }
+ elDoors.placements.forEach(door=>{
+   const dx0=boxX+door.x0*doorScale,dx1=boxX+door.x1*doorScale;
+   const header=doorBottom-eh*door.height/G.H;
+   // A real open threshold: 2x2 jambs, a 2x2 header and door leaf frame inside one bay.
+   line(dx0,header,dx0,doorBottom);line(dx1,header,dx1,doorBottom);line(dx0,header,dx1,header);
+   const inset=Math.min((dx1-dx0)*.04,.04);
+   doc.setLineWidth(.008);
+   doc.rect(dx0+inset,header+inset,(dx1-dx0)-2*inset,(doorBottom-header)-2*inset);
+   const handleX=s.doorHinge==='right'?dx0+inset*2:dx1-inset*2;
+   line(handleX,header+(doorBottom-header)*.51,handleX,header+(doorBottom-header)*.57);
+ });
+
  txt('FRONT ELEVATION - '+ft(G.W)+' x '+ft(G.H),boxX,ey+eh+.25,10,true);
  txt('TOP: '+s.topRoofProfile+' roof / '+s.topWallProfile+' wall spline - counted separately',boxX,10,8);
  sheet('A-102','ROOF FRAMING / PROFILE SCHEDULE');
@@ -233,6 +262,7 @@ function mount({project,photos,host,save,notify}){
         if(key==='stock24'||key==='stock30'){s.stocks[key==='stock24'?0:1]=Number(value)||0;}
         else if(key==='matchX'||key==='matchY'){s.match[key==='matchX'?'x':'y']=Number(value)||0;}
         else if(key==='doorWidthIn'||key==='doorHeightIn'){s[key==='doorWidthIn'?'doorWidth':'doorHeight']=(Number(value)||0)/12;}
+        else if(key==='doorBay'){s.doorBay=value===''?null:Number(value);}
         else if(input.type==='number'){s[key]=value===''?0:Number(value);}
         else s[key]=value;
         if(key==='finish')project.frameColor=value;
@@ -264,6 +294,7 @@ function mount({project,photos,host,save,notify}){
          if(!valid||!s.verified)throw Error('Verifica y confirma las medidas de campo antes de aprobar.');
          if(report.unresolved.length)throw Error('Hay piezas mayores que la longitud comercial; resuelve splices/stock primero.');
          if(s.pictureView||s.roof==='irp'||s.roof==='mixed')throw Error('Se requiere revisión estructural y un schedule completo de componentes Picture View/IRP antes de aprobar materiales de compra.');
+         if(E.doorLayout(s).issues.length)throw Error('La puerta no cabe en el panel seleccionado. Ajusta el ancho del panel, la altura o la cantidad de puertas antes de aprobar.');
          if(!confirm('¿Aprobar la lista conceptual de compra? No se enviará ninguna orden.')){b.disabled=false;return;}
          s.approvedOrder={signature:E.signature(s,project),approvedAt:Date.now()};
          store();tell('Lista revisada y aprobada localmente. Envío todavía manual.');setTimeout(render,0);
