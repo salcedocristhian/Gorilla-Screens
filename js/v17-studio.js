@@ -202,7 +202,7 @@ function mount({project,photos,host,save,notify}){
         else if(input.type==='number'){s[key]=value===''?0:Number(value);}
         else s[key]=value;
         if(key==='finish')project.frameColor=value;
-        store();render();
+        store();setTimeout(render,0);
       };
    });
    host.querySelectorAll('[data-v17-match]').forEach(input=>{
@@ -217,9 +217,9 @@ function mount({project,photos,host,save,notify}){
           const label=host.querySelector('#v17-splitval');if(label)label.textContent=val+'%';
         }
       };
-      input.onchange=()=>{store();render();};
+      input.onchange=()=>{store();setTimeout(render,0);};
    });
-   host.querySelectorAll('[data-v17-cost]').forEach(input=>{input.onchange=()=>{const k=input.dataset.v17Cost;s.costs[k]=input.value===''?null:Number(input.value);store();render();};});
+   host.querySelectorAll('[data-v17-cost]').forEach(input=>{input.onchange=()=>{const k=input.dataset.v17Cost;s.costs[k]=input.value===''?null:Number(input.value);store();setTimeout(render,0);};});
    host.querySelectorAll('[data-v17-action]').forEach(b=>b.onclick=async()=>{
       b.disabled=true;
       try{
@@ -232,7 +232,7 @@ function mount({project,photos,host,save,notify}){
          if(s.pictureView||s.roof==='irp'||s.roof==='mixed')throw Error('Se requiere revisión estructural y un schedule completo de componentes Picture View/IRP antes de aprobar materiales de compra.');
          if(!confirm('¿Aprobar la lista conceptual de compra? No se enviará ninguna orden.')){b.disabled=false;return;}
          s.approvedOrder={signature:E.signature(s,project),approvedAt:Date.now()};
-         store();tell('Lista revisada y aprobada localmente. Envío todavía manual.');render();
+         store();tell('Lista revisada y aprobada localmente. Envío todavía manual.');setTimeout(render,0);
        }
        if(kind==='email'){
          if(E.orderStatus(s,project)!=='APPROVED')throw Error('Primero aprueba la lista vigente. Cambios requieren nueva aprobación.');
