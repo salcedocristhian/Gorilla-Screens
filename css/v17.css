@@ -83,3 +83,25 @@
  .tabbar a span{font-size:9px;letter-spacing:-.03em}
  .tabbar a svg{width:21px;height:21px}
 }
+
+
+/* Existing Site is a compact secondary layer: the screen enclosure is the primary editor. */
+.v17-site-reference{margin:14px 0;border:1px solid var(--line);border-radius:16px;padding:13px;background:var(--card)}
+.v17-site-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.v17-site-header .cap{font-size:11px;font-weight:750}
+.v17-site-header p{font-size:12px;color:var(--sub);line-height:1.45;margin:5px 0 0}
+.v17-site-switch{flex-shrink:0;display:flex;align-items:center;gap:6px;min-height:38px;color:var(--text);font-size:12px;font-weight:650}
+.v17-site-switch input{accent-color:var(--accent);width:19px;height:19px}
+.v17-site-primary{display:flex;align-items:center;gap:11px;margin-top:12px}
+.v17-site-thumb{height:67px;width:80px;flex-shrink:0;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:var(--field)}
+.v17-site-empty{display:flex;justify-content:center;align-items:center;color:var(--sub);font-size:10px;text-align:center;padding:4px}
+.v17-site-photo-field{flex:1;min-width:0}
+.v17-site-more{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.v17-site-more summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;list-style:none;font-size:12px;font-weight:700;padding:5px 0;color:var(--text)}
+.v17-site-more summary::-webkit-details-marker{display:none}
+.v17-site-more[open] summary span{transform:rotate(180deg)}
+.v17-site-more>.v17-fields{margin-top:12px}
+.v17-site-more .v17-checkrow{margin:12px 0}
+.v17-site-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--sub)}
+.v17-attach-warning{border:1px solid #c7883c;color:var(--text)}
+@media(max-width:420px){.v17-site-header{align-items:flex-start}.v17-site-switch{font-size:11px}.v17-site-primary{gap:9px}.v17-site-thumb{width:65px;height:62px}}
