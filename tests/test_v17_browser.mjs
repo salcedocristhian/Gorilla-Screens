@@ -76,8 +76,10 @@ try{
  await page.waitForFunction(expected=>Number(document.querySelector('[data-v17-key="height"]')?.value)===expected,oldHeight+1);
  assert.equal(Number(await page.locator('[data-v17-key="height"]').inputValue()),oldHeight+1,'Snap explicitly aligns the enclosure with existing house fascia');
  await page.locator('[data-v17-site="enabled"]').uncheck();
+ await page.waitForFunction(()=>document.querySelector('#v17-preview')?.dataset.houseReference==='false');
  assert.equal(await page.locator('#v17-preview').getAttribute('data-house-reference'),'false','House layer can be hidden independently of the enclosure');
  await page.locator('[data-v17-site="enabled"]').check();
+ await page.waitForFunction(()=>document.querySelector('#v17-preview')?.dataset.houseReference==='true');
  assert.equal(await page.locator('#v17-preview').getAttribute('data-house-reference'),'true');
  await page.screenshot({path:'qa-v17-mobile-house-context.png',fullPage:true});
  await page.locator('[data-v17-tab="match"]').click();
