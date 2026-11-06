@@ -59,7 +59,7 @@ function mount(host,s){
  // Ground and an intentionally neutral reference attachment plane, not an invented house reconstruction.
  mesh(new T.PlaneGeometry(W+6,D+6),floorMat,W/2,-.04,D/2).rotation.x=-Math.PI/2;
  plane([[0,0,-.55],[W,0,-.55],[W,H+1.5,-.55],[0,H+1.5,-.55]],houseMat);
- for(let i=0;i<=bayCount;i++)beam([W*i/bayCount,0,D],[W*i/bayCount,H,D],.22,.4);
+ for(let i=0;i<=bayCount;i++)if(!s.pictureView||i===0||i===bayCount)beam([W*i/bayCount,0,D],[W*i/bayCount,H,D],.22,.4);
  for(let side of [0,W])for(let j=0;j<sideCount;j++)beam([side,0,D*j/sideCount],[side,H,D*j/sideCount],.22,.4);
  // Top two separate profiles: upper roof 2x2, lower wall spline 1x2, both front and sides.
  beam([0,H,D],[W,H,D],.18,.18);
