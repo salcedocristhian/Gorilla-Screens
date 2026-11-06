@@ -81,7 +81,7 @@ function deliverables(s,r,photos){
    '<p class="lead smalltext"><strong>Not for permitting:</strong> No sealed engineering, structural analysis, survey or AHJ approvals are produced by this module.</p></section>';
 }
 function purchasing(s,r,p){
- const status=E.orderStatus(s,p),ready=r.geometry.valid&&s.verified&&!r.unresolved.length,priced=E.price(s,r);
+ const status=E.orderStatus(s,p),unsupported=(s.pictureView||s.roof==='irp'||s.roof==='mixed'),ready=r.geometry.valid&&s.verified&&!r.unresolved.length&&!unsupported,priced=E.price(s,r);
  const table=r.rows.length?'<div class="v17-tablewrap"><table class="v17-table"><thead><tr><th>Profile / finish</th><th>Net LF</th><th>Commercial bars</th><th>Price / LF</th></tr></thead><tbody>'+
     r.rows.map(row=>{
       const grouped={};row.bars.forEach(b=>{const key=String(b.length);grouped[key]=(grouped[key]||0)+1;});
@@ -99,6 +99,7 @@ function purchasing(s,r,p){
    field('supplierEmail','Supplier email (enter actual address)',s.supplierEmail,'email')+'</div>'+
    '<div class="v17-metrics"><div><b>'+r.rows.length+'</b><small>Profile types</small></div><div><b>'+r.rows.reduce((t,x)=>t+x.bars.length,0)+'</b><small>Commercial bars</small></div><div><b>'+fmt(r.rows.reduce((t,x)=>t+x.purchased,0))+'</b><small>Purchase length</small></div></div>'+
    table+(r.unresolved.length?info('<b>BLOCKED:</b> '+r.unresolved.length+' continuous pieces exceed configured commercial stock. Confirm lengths, approved splices or an alternate supplier; do not order automatically.'):'')+
+   (unsupported?info('<b>PRELIMINARY ONLY:</b> Picture View or solid IRP roof requires an engineered profile/connection or panel schedule before its purchasing list can be approved. The current takeoff is not complete for that system.'):'')+
    '<div class="v17-btnrow">'+action('csv','↓ Export full cutting plan CSV')+action('approve','✓ Approve purchase list','')+'</div>'+
    '<hr class="v17-rule"><div class="cap">ESTIMATE · PRIVATE COMPANY RATES</div><div class="v17-fields">'+field('laborPerSqft','Labor · $ per developed ft²',s.laborPerSqft)+
    field('overhead','Overhead / equipment / permits · $',s.overhead)+field('targetMargin','Target gross margin · %',s.targetMargin,'number','1')+'</div>'+priceTxt+
@@ -228,6 +229,7 @@ function mount({project,photos,host,save,notify}){
        if(kind==='approve'){
          if(!valid||!s.verified)throw Error('Verifica y confirma las medidas de campo antes de aprobar.');
          if(report.unresolved.length)throw Error('Hay piezas mayores que la longitud comercial; resuelve splices/stock primero.');
+         if(s.pictureView||s.roof==='irp'||s.roof==='mixed')throw Error('Se requiere revisión estructural y un schedule completo de componentes Picture View/IRP antes de aprobar materiales de compra.');
          if(!confirm('¿Aprobar la lista conceptual de compra? No se enviará ninguna orden.')){b.disabled=false;return;}
          s.approvedOrder={signature:E.signature(s,project),approvedAt:Date.now()};
          store();tell('Lista revisada y aprobada localmente. Envío todavía manual.');render();
