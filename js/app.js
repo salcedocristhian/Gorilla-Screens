@@ -9,6 +9,7 @@
   const IC = {
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
     gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+    studio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 12h16M12 4v16"/><path d="M7 7h2m6 9h2"/></svg>',
     datos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
     fotos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
     medidas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l14-14 4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>',
@@ -16,7 +17,7 @@
     precio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3 2 2.6 4.5 3 4.5 1.3 4.5 3-2 3-4.5 3-4.5-1.3-4.5-3"/></svg>',
     entregar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>'
   };
-  const TABS = [['datos', 'Datos'], ['fotos', 'Fotos'], ['medidas', 'Medidas'], ['3d', '3D'], ['precio', 'Precio'], ['entregar', 'Entregar']];
+  const TABS = [['datos', 'Datos'], ['fotos', 'Fotos'], ['medidas', 'Medidas'], ['3d', '3D'], ['studio', 'Studio'], ['precio', 'Precio'], ['entregar', 'Entregar']];
   const PHOTO_CATS = [
     ['aerea', 'Vista aérea', 'Imagen aérea autorizada o fotografía propia. Se muestra en el plano de ubicación.'],
     ['street', 'Vista desde la calle', 'Fotografía propia o referencia con derechos de uso.'],
@@ -180,9 +181,14 @@
     if (tab === 'editor') { return tabEditor(el); }
     if (tab === 'roof') { return tabRoof(el); }
     if (tab === 'parts') { return tabParts(el); }
-    ({ datos: tabDatos, fotos: tabFotos, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
+    ({ datos: tabDatos, fotos: tabFotos, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
     window.scrollTo(0, 0);
   }
+  function tabStudio(el) {
+    if (!window.GSSV17) { el.innerHTML='<div class="card">V17 Studio no disponible.</div>'; return; }
+    window.GSSV17.mount({project:S.project,photos:S.photos,host:el,save:saveSoon,notify:toast});
+  }
+
   function tabEditor(el) {
     if (!window.GSSPhotoEditor) { el.innerHTML='<div class="card">Editor no disponible.</div>'; return; }
     el.classList.add('draft-page');
