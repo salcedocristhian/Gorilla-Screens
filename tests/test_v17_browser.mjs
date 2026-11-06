@@ -54,6 +54,9 @@ try{
  await page.goto(base);
  await page.locator('[data-a="demo"]').click();
  await page.locator('a[href$="/studio"]').click();
+ // The opt-in V16 demonstration does not contain V17 rectangular-cage dimensions.
+ // Enter illustrative test dimensions; do not pretend photographs established field measurements.
+ await set('width',20);await set('depth',30);await set('height',10);
  await page.waitForTimeout(2500);
  if(!(await page.locator('#v17-preview canvas').count())){
    throw Error('House context preview failed: '+(await page.locator('#v17-preview').innerText())+' | '+JSON.stringify(previewWarnings.slice(-12))+' | '+JSON.stringify(pageErrors));
