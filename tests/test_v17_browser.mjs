@@ -3,8 +3,9 @@ import {chromium} from 'playwright';
 const base='http://127.0.0.1:8765/';
 const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader']});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1,acceptDownloads:true});
-const pageErrors=[];
+const pageErrors=[],previewWarnings=[];
 page.on('pageerror',e=>pageErrors.push(e.message));
+page.on('console',msg=>{if(msg.type()==='warning'||msg.type()==='error')previewWarnings.push(msg.text());});
 try{
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.locator('[data-a="newphoto"]').click();
@@ -53,6 +54,10 @@ try{
  await page.goto(base);
  await page.locator('[data-a="demo"]').click();
  await page.locator('a[href$="/studio"]').click();
+ await page.waitForTimeout(2500);
+ if(!(await page.locator('#v17-preview canvas').count())){
+   throw Error('House context preview failed: '+(await page.locator('#v17-preview').innerText())+' | '+JSON.stringify(previewWarnings.slice(-12))+' | '+JSON.stringify(pageErrors));
+ }
  await page.locator('#v17-preview canvas').waitFor({timeout:20000});
  assert.equal(await page.locator('#v17-preview').getAttribute('data-house-reference'),'true','Own-project photos automatically enable existing house context');
  assert.ok(await page.locator('#v17-preview').getAttribute('data-photo-reference'),'Project photo is used, not a sample from another project');
