@@ -238,6 +238,11 @@
         <p class="lead smalltext" style="margin:8px 0 0">La vista aérea puede agregarse a Fotos si cuentas con una imagen autorizada. Esta app no captura ni almacena automáticamente Google Maps.</p>` : ''}
       </div>
       <div class="card">
+        <div class="cap">ACABADO DEL ALUMINIO · DATOS INICIALES</div>
+        <div class="field"><label for="projectFinish">Selecciona color para este proyecto</label><select id="projectFinish"><option value="white" ${p.frameColor==='white'?'selected':''}>White</option><option value="bronze" ${p.frameColor==='bronze'?'selected':''}>Dark Bronze</option></select></div>
+        <p class="lead smalltext">El acabado seleccionado se refleja en Studio, el modelo y los materiales. Las selecciones históricas quedan preservadas.</p>
+      </div>
+      <div class="card">
         <p class="cap">Cliente</p>
         <div class="field"><label for="cn">Nombre</label><input id="cn" data-c="name" autocomplete="name" value="${esc(p.client.name)}"></div>
         <div class="grid2"><div class="field"><label for="cp">Teléfono</label><input id="cp" data-c="phone" type="tel" autocomplete="tel" value="${esc(p.client.phone)}"></div>
@@ -252,6 +257,7 @@
     $('#addr').oninput = e => { p.address = e.target.value; p.geo = null; saveSoon(); refreshHeader(); };
     $('#addr').onchange = () => tabDatos(el);
     $$('[data-c]').forEach(i => i.oninput = () => { p.client[i.dataset.c] = i.value; saveSoon(); refreshHeader(); });
+    $('#projectFinish').onchange = e => { p.frameColor=e.target.value; if (p.studioV17) p.studioV17.finish=e.target.value; S.builtFor='';saveSoon(); };
     $('#sp').oninput = e => { p.salesperson = e.target.value; saveSoon(); };
     $('#nt').oninput = e => { p.notes = e.target.value; saveSoon(); };
     $('[data-a="geo"]').onclick = async () => {
@@ -344,7 +350,7 @@
         ${sw('dn', p.gutter.downspoutNew, 'Downspout nuevo (color del frame)')}
       </div>
       <div class="card"><p class="cap">Color y malla</p>
-        <div class="chips" role="group" aria-label="Color del frame">${Object.entries(Mo.FRAME_COLORS).map(([k, c]) => `<button class="chip" data-fc="${k}" aria-pressed="${p.frameColor === k}">${c.name}</button>`).join('')}</div>
+        <div class="chips" role="group" aria-label="Color del frame">${Object.entries(Mo.FRAME_COLORS).filter(([k])=>k!=='black').map(([k, c]) => `<button class="chip" data-fc="${k}" aria-pressed="${p.frameColor === k}">${c.name}</button>`).join('')}</div>
         <div class="field" style="margin-top:12px"><label for="mesh">Tipo de malla</label><input id="mesh" value="${esc(p.mesh)}" placeholder="Ej. 18×14 charcoal"></div>
       </div>
       <div class="card"><p class="cap">Casa (para el modelo 3D)</p>
