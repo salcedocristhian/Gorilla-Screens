@@ -128,12 +128,13 @@ function mount(host,s){
  if(ro)ro.observe(host);resize();
  const lost=e=>{e.preventDefault();dead=true;};
  renderer.domElement.addEventListener('webglcontextlost',lost);
- function loop(){if(dead)return;requestAnimationFrame(loop);controls.update();renderer.render(scene,camera);}
- loop();
- return {destroy(){dead=true;if(ro)ro.disconnect();controls.dispose();objects.forEach(o=>o.geometry.dispose());
+ function cleanup(){if(dead)return;dead=true;if(ro)ro.disconnect();controls.dispose();objects.forEach(o=>o.geometry.dispose());
   [frameMat,roofMat,wallMat,irpMat,houseMat,floorMat].forEach(m=>m.dispose());
   renderer.dispose();if(renderer.domElement.parentNode)renderer.domElement.parentNode.removeChild(renderer.domElement);
- }};
+ }
+ function loop(){if(dead)return;if(!host.isConnected){cleanup();return;}requestAnimationFrame(loop);controls.update();renderer.render(scene,camera);}
+ loop();
+ return {destroy:cleanup};
 }
 window.GSSV17Preview={mount};
 })();
