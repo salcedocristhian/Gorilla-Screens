@@ -9,6 +9,7 @@
   const IC = {
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
     gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+    studio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 12h16M12 4v16"/><path d="M7 7h2m6 9h2"/></svg>',
     datos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
     fotos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
     medidas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l14-14 4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>',
@@ -16,7 +17,7 @@
     precio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3 2 2.6 4.5 3 4.5 1.3 4.5 3-2 3-4.5 3-4.5-1.3-4.5-3"/></svg>',
     entregar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>'
   };
-  const TABS = [['datos', 'Datos'], ['fotos', 'Fotos'], ['medidas', 'Medidas'], ['3d', '3D'], ['precio', 'Precio'], ['entregar', 'Entregar']];
+  const TABS = [['datos', 'Datos'], ['fotos', 'Fotos'], ['medidas', 'Medidas'], ['3d', '3D'], ['studio', 'Studio'], ['precio', 'Precio'], ['entregar', 'Entregar']];
   const PHOTO_CATS = [
     ['aerea', 'Vista aérea', 'Imagen aérea autorizada o fotografía propia. Se muestra en el plano de ubicación.'],
     ['street', 'Vista desde la calle', 'Fotografía propia o referencia con derechos de uso.'],
@@ -180,9 +181,14 @@
     if (tab === 'editor') { return tabEditor(el); }
     if (tab === 'roof') { return tabRoof(el); }
     if (tab === 'parts') { return tabParts(el); }
-    ({ datos: tabDatos, fotos: tabFotos, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
+    ({ datos: tabDatos, fotos: tabFotos, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
     window.scrollTo(0, 0);
   }
+  function tabStudio(el) {
+    if (!window.GSSV17) { el.innerHTML='<div class="card">V17 Studio no disponible.</div>'; return; }
+    window.GSSV17.mount({project:S.project,photos:S.photos,host:el,save:saveSoon,notify:toast});
+  }
+
   function tabEditor(el) {
     if (!window.GSSPhotoEditor) { el.innerHTML='<div class="card">Editor no disponible.</div>'; return; }
     el.classList.add('draft-page');
@@ -232,6 +238,11 @@
         <p class="lead smalltext" style="margin:8px 0 0">La vista aérea puede agregarse a Fotos si cuentas con una imagen autorizada. Esta app no captura ni almacena automáticamente Google Maps.</p>` : ''}
       </div>
       <div class="card">
+        <div class="cap">ACABADO DEL ALUMINIO · DATOS INICIALES</div>
+        <div class="field"><label for="projectFinish">Selecciona color para este proyecto</label><select id="projectFinish"><option value="white" ${p.frameColor==='white'?'selected':''}>White</option><option value="bronze" ${p.frameColor==='bronze'?'selected':''}>Dark Bronze</option></select></div>
+        <p class="lead smalltext">El acabado seleccionado se refleja en Studio, el modelo y los materiales. Las selecciones históricas quedan preservadas.</p>
+      </div>
+      <div class="card">
         <p class="cap">Cliente</p>
         <div class="field"><label for="cn">Nombre</label><input id="cn" data-c="name" autocomplete="name" value="${esc(p.client.name)}"></div>
         <div class="grid2"><div class="field"><label for="cp">Teléfono</label><input id="cp" data-c="phone" type="tel" autocomplete="tel" value="${esc(p.client.phone)}"></div>
@@ -246,6 +257,7 @@
     $('#addr').oninput = e => { p.address = e.target.value; p.geo = null; saveSoon(); refreshHeader(); };
     $('#addr').onchange = () => tabDatos(el);
     $$('[data-c]').forEach(i => i.oninput = () => { p.client[i.dataset.c] = i.value; saveSoon(); refreshHeader(); });
+    $('#projectFinish').onchange = e => { p.frameColor=e.target.value; if (p.studioV17) p.studioV17.finish=e.target.value; S.builtFor='';saveSoon(); };
     $('#sp').oninput = e => { p.salesperson = e.target.value; saveSoon(); };
     $('#nt').oninput = e => { p.notes = e.target.value; saveSoon(); };
     $('[data-a="geo"]').onclick = async () => {
@@ -338,7 +350,7 @@
         ${sw('dn', p.gutter.downspoutNew, 'Downspout nuevo (color del frame)')}
       </div>
       <div class="card"><p class="cap">Color y malla</p>
-        <div class="chips" role="group" aria-label="Color del frame">${Object.entries(Mo.FRAME_COLORS).map(([k, c]) => `<button class="chip" data-fc="${k}" aria-pressed="${p.frameColor === k}">${c.name}</button>`).join('')}</div>
+        <div class="chips" role="group" aria-label="Color del frame">${Object.entries(Mo.FRAME_COLORS).filter(([k])=>k!=='black').map(([k, c]) => `<button class="chip" data-fc="${k}" aria-pressed="${p.frameColor === k}">${c.name}</button>`).join('')}</div>
         <div class="field" style="margin-top:12px"><label for="mesh">Tipo de malla</label><input id="mesh" value="${esc(p.mesh)}" placeholder="Ej. 18×14 charcoal"></div>
       </div>
       <div class="card"><p class="cap">Casa (para el modelo 3D)</p>

@@ -46,7 +46,7 @@
         archWallH: 0, garageW: 0, garageDoorW: 0, frontWindowW: 0, evCharger: false, palms: false },
       openings: [], pier: 0, topScreen: { on: false, length: 0, depth: 0 },
       gutter: { superOn: false, superLen: 0, existingRemain: 0, downspoutNew: false },
-      frameColor: 'bronze', mesh: '18×14 fiberglass charcoal',
+      frameColor: 'white', mesh: '18×14 fiberglass charcoal',
       drawingDraft: null, approvedDrawing: null, roofDraft: null, roofDesign: null,
       designStatus: 'awaiting-photos',
       quote: { rate: 0, extras: [], lang: 'es', number: '' }
