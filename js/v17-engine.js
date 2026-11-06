@@ -113,7 +113,7 @@
     // Keep approval stable across price-only edits; invalidate for changed geometry/cut rules.
     return JSON.stringify({revision:s.revision,width:s.width,depth:s.depth,height:s.height,verified:s.verified,roof:s.roof,
       mansardRise:s.mansardRise,mansardInset:s.mansardInset,irpDepth:s.irpDepth,pictureView:s.pictureView,
-      finish:s.finish,mesh:s.mesh,postProfile:s.postProfile,beamProfile:s.beamProfile,crossProfile:s.crossProfile,
+      finish:s.finish,mesh:s.mesh,supplier:s.supplier,costs:s.costs,postProfile:s.postProfile,beamProfile:s.beamProfile,crossProfile:s.crossProfile,
       topRoofProfile:s.topRoofProfile,topWallProfile:s.topWallProfile,chairProfile:s.chairProfile,bottomProfile:s.bottomProfile,
       chairHeight:s.chairHeight,doorCount:s.doorCount,doorWidth:s.doorWidth,doorHeight:s.doorHeight,
       gutterSize:s.gutterSize,gutterEnabled:s.gutterEnabled,downspouts:s.downspouts,waste:s.waste,stocks:s.stocks,
