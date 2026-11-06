@@ -43,7 +43,7 @@
     const doorArea=clamp(s.doorCount,0,10)*clamp(s.doorWidth,2,8)*clamp(s.doorHeight,5,10);
     return {valid,W,D,H,frontBays,sideBays,roofRows,wallArea:round(wallArea),screenRoofArea:round(roofArea),
       solidRoofArea:round(solidArea),meshArea:round(wallArea+roofArea),doorArea:round(doorArea),
-      footprint:round(W*D),totalPerimeter:round(W+2*D),postCount:valid?(frontBays+1+2*sideBays):0};
+      footprint:round(W*D),totalPerimeter:round(W+2*D),postCount:valid?((s.pictureView?2:frontBays+1)+2*sideBays):0};
   }
   function segments(s) {
     const g=geometry(s),out=[];
