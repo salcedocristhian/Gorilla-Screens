@@ -165,6 +165,39 @@ async function generatePDF(p,s,r,photos){
  doc.rect(3.1,4.25,sw,sd);txt('PROPOSED ENCLOSURE FOOTPRINT',3.1,4.05,9,true,blue);
  txt(ft(G.W)+' x '+ft(G.D)+'  | '+G.footprint+' sq ft',3.1,4.25+sd+.32,9);
  txt(photos.some(x=>x.cat==='aerea')?'Aerial image is available in this project. Survey dimensions still required.':'No site aerial or survey included in this conceptual exhibit.',1.8,8.55,9);
+ sheet('V-101','LAYOUT VISUALIZATION / PHOTO REFERENCES');
+ txt('THESE IMAGES ARE PROJECT REFERENCES, NOT SURVEY-CALIBRATED RENDERS.',.86,1.65,8,true,[170,62,39]);
+ async function photoData(photo){
+   return new Promise((resolve,reject)=>{
+     if(!photo?.blob)return reject(Error('Missing site image'));
+     const reader=new FileReader();
+     reader.onload=()=>resolve(reader.result);
+     reader.onerror=()=>reject(reader.error||Error('Unable to read image'));
+     reader.readAsDataURL(photo.blob);
+   });
+ }
+ async function showPhoto(photo,x,label){
+   txt(label,x,2.0,10,true);
+   doc.setDrawColor(...grey);doc.rect(x,2.18,5.6,3.3);
+   if(!photo){txt('No project-owned photo provided.',x+.45,3.8,9);return;}
+   try{
+     const url=await photoData(photo),props=doc.getImageProperties(url),ratio=Math.min(5.45/props.width,3.15/props.height);
+     const wi=props.width*ratio,hi=props.height*ratio;
+     doc.addImage(url,props.fileType||'JPEG',x+(5.6-wi)/2,2.18+(3.3-hi)/2,wi,hi,undefined,'FAST');
+   }catch(e){txt('Image cannot be embedded in PDF: '+photo.cat,x+.3,3.8,8);}
+ }
+ await showPhoto(photos.find(x=>x.cat==='frente'||x.cat==='porche')||null,.86,'EXISTING SITE / BEFORE');
+ await showPhoto(photos.find(x=>x.cat==='render')||null,6.8,'PROPOSED IMAGE / AFTER');
+ txt('SCHEMATIC ISOMETRIC - NOT APPROVED ENGINEERING',.86,6,9,true);
+ const xscale=Math.min(.19,5.9/Math.max(G.W,1)),zscale=Math.min(.12,3/Math.max(G.D,1)),yscale=Math.min(.28,2.5/Math.max(G.H,1));
+ const proj=(x,y,z)=>[1.8+x*xscale+z*zscale,9.65-y*yscale-z*zscale*.48];
+ const iso=(a,b)=>{const x=proj(...a),y=proj(...b);line(x[0],x[1],y[0],y[1]);};
+ for(const x of [0,G.W]){iso([x,0,G.D],[x,G.H,G.D]);iso([x,G.H,0],[x,G.H,G.D]);}
+ iso([0,G.H,0],[G.W,G.H,0]);iso([0,G.H,G.D],[G.W,G.H,G.D]);
+ for(let i=1;i<G.frontBays;i++){const x=G.W*i/G.frontBays;if(!s.pictureView)iso([x,0,G.D],[x,G.H,G.D]);iso([x,G.H,0],[x,G.H,G.D]);}
+ for(let j=1;j<G.roofRows;j++){const z=G.D*j/G.roofRows;iso([0,G.H,z],[G.W,G.H,z]);}
+ txt('Aluminum '+(s.finish==='white'?'White':'Dark Bronze')+' | Roof '+s.roof+' | '+G.footprint+' sq ft footprint',7.3,8.25,10,true);
+ txt('3D geometry is schematic. Image perspective matching and actual profile sizing need review.',7.3,8.7,8);
  sheet('Q-101','MATERIAL TAKEOFF / COMMERCIAL CUT SUMMARY');
  txt('ALUMINUM FINISH: '+(s.finish==='white'?'WHITE':'DARK BRONZE')+'   | WASTE RESERVE: '+s.waste+'%',.86,1.85,11,true);
  txt('Stock assumptions: '+s.stocks.join(', ')+' ft  | Supplier: '+s.supplier,.86,2.15,9);
