@@ -22,3 +22,28 @@ jobs:
         run: node tests/test_model.mjs
       - name: V17 geometry and procurement invariants
         run: node tests/test_v17.mjs
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install browser harness
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Serve Gorilla over HTTP
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/gorilla-static.log 2>&1 &
+          sleep 3
+          curl -f http://127.0.0.1:8765/index.html
+      - name: V17 mobile visual browser smoke
+        run: node tests/test_v17_browser.mjs
+      - name: Save QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v17-mobile-qa
+          path: |
+            qa-v17-mobile-*.png
+          if-no-files-found: ignore
