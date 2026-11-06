@@ -1,0 +1,24 @@
+name: Gorilla V17 Quality Gate
+on:
+  push:
+    branches:
+      - feature/v17-design-to-purchase-studio
+  pull_request:
+    branches:
+      - main
+jobs:
+  node-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify JavaScript syntax
+        run: |
+          for f in js/*.js; do
+            echo "Checking $f"
+            node --check "$f"
+          done
+      - name: Original model regression
+        run: node tests/test_model.mjs
+      - name: V17 geometry and procurement invariants
+        run: node tests/test_v17.mjs
