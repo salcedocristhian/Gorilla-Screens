@@ -73,6 +73,7 @@ try{
  await page.getByText('Fascia connection mismatch:').waitFor();
  await page.locator('[data-v17-key="site-verified"]').check();
  await page.locator('[data-v17-action="snap"]').click();
+ await page.waitForFunction(expected=>Number(document.querySelector('[data-v17-key="height"]')?.value)===expected,oldHeight+1);
  assert.equal(Number(await page.locator('[data-v17-key="height"]').inputValue()),oldHeight+1,'Snap explicitly aligns the enclosure with existing house fascia');
  await page.locator('[data-v17-site="enabled"]').uncheck();
  assert.equal(await page.locator('#v17-preview').getAttribute('data-house-reference'),'false','House layer can be hidden independently of the enclosure');
