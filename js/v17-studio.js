@@ -9,7 +9,7 @@ const fmt=n=>Number(n||0).toFixed(2)+' ft';
 const download=(filename,blob)=>{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);};
 let active='design',previousPreview=null;
 function field(k,label,value,type='number',step='.25',extra=''){
- const props=type==='checkbox'?'type="checkbox" '+(value?'checked':''):'type="'+type+'" value="'+esc(value===null?'':value)+'" '+(type==='number'?'step="'+step+'" min="0"':'');
+ const props=type==='checkbox'?'type="checkbox" '+(value?'checked':''):'type="'+type+'" value="'+esc(value===null?'':value)+'" '+(type==='number'?'step="'+step+'" '+(k==='site-offsetX'?'':'min="0"'):'');
  return '<label class="v17-field"><span>'+esc(label)+'</span><input data-v17-key="'+esc(k)+'" '+props+' '+extra+'></label>';
 }
 function select(k,label,val,options){
@@ -221,14 +221,29 @@ async function generatePDF(p,s,r,photos){
  txt('FRONT RECEIVER: '+s.topRoofProfile,rx,ry+rd+.3,9,true);
  txt('ROOF TYPE '+s.roof.toUpperCase()+'   | BIG BEAM '+s.beamProfile+'   | TRAVERSE '+s.crossProfile,rx,9.1,11,true);
  txt('Roof panel target ~'+s.roofTarget+' ft; framing schematic only. Engineer must check spans and sections.',rx,9.5,8);
- sheet('SP-101','SITE PLANNING / PROPERTY LOCATION');
- rectFrame(1.45,2.4,10.7,6.7);
- txt('PROPERTY SURVEY / LOT LIMITS: NOT PROVIDED BY APP',1.8,3.0,10,true);
- txt('No assumed property boundaries, zoning setbacks, slab or footing adequacy.',1.8,3.4,9);
- doc.setDrawColor(...blue);doc.setLineWidth(.024);const sw=Math.min(5,G.W*.12),sd=Math.min(3,G.D*.12);
- doc.rect(3.1,4.25,sw,sd);txt('PROPOSED ENCLOSURE FOOTPRINT',3.1,4.05,9,true,blue);
- txt(ft(G.W)+' x '+ft(G.D)+'  | '+G.footprint+' sq ft',3.1,4.25+sd+.32,9);
- txt(photos.some(x=>x.cat==='aerea')?'Aerial image is available in this project. Survey dimensions still required.':'No site aerial or survey included in this conceptual exhibit.',1.8,8.55,9);
+ sheet('SP-101','SITE PLAN / EXISTING HOUSE + PROPOSED ENCLOSURE');
+ txt('CONCEPTUAL RELATIVE LAYOUT / NOT A PROPERTY SURVEY',.9,1.92,11,true,[170,62,39]);
+ txt('No lot boundaries or setbacks inferred. Verify house fascia, slab, footing and attachments.',.9,2.23,9);
+ const existing=E.siteLayout(s),hasHouse=existing.enabled;
+ const leftLimit=hasHouse?Math.min(0,existing.x0):0;
+ const rightLimit=hasHouse?Math.max(G.W,existing.x1):G.W;
+ const extent=G.D+(hasHouse?existing.depth:0);
+ const planScale=Math.min(9.8/Math.max(.01,rightLimit-leftLimit),5.15/Math.max(.01,extent));
+ const originX=1.5-leftLimit*planScale,connectY=3.05+(hasHouse?existing.depth:0)*planScale;
+ if(hasHouse){
+   doc.setDrawColor(...grey);doc.setFillColor(224,225,222);
+   doc.rect(originX+existing.x0*planScale,connectY-existing.depth*planScale,
+     existing.width*planScale,existing.depth*planScale,'FD');
+   txt('EXISTING HOUSE - REFERENCE ONLY',originX+existing.x0*planScale,connectY-existing.depth*planScale-.12,8,true);
+ }
+ doc.setDrawColor(...blue);doc.setLineWidth(.034);
+ doc.rect(originX,connectY,G.W*planScale,G.D*planScale);
+ doc.line(originX,connectY,originX+G.W*planScale,connectY);
+ txt('FASCIA / SUPER GUTTER CONNECTION',originX,connectY-.15,8,true,blue);
+ txt('PROPOSED ENCLOSURE',originX+.09,connectY+.33,9,true,blue);
+ txt(ft(G.W)+' x '+ft(G.D)+'  | '+G.footprint+' sq ft',originX,connectY+G.D*planScale+.28,9);
+ txt(hasHouse?'Existing facade/photo positioning remains conceptual.':'No house context selected. Add a project-owned house photo in Studio.',.9,8.98,8);
+ txt('Actual survey, zoning setbacks and true roof/footing layout require field and engineering review.',.9,9.33,8);
  sheet('V-101','LAYOUT VISUALIZATION / PHOTO REFERENCES');
  txt('THESE IMAGES ARE PROJECT REFERENCES, NOT SURVEY-CALIBRATED RENDERS.',.86,1.65,8,true,[170,62,39]);
  async function photoData(photo){
@@ -250,7 +265,7 @@ async function generatePDF(p,s,r,photos){
      doc.addImage(url,props.fileType||'JPEG',x+(5.6-wi)/2,2.18+(3.3-hi)/2,wi,hi,undefined,'FAST');
    }catch(e){txt('Image cannot be embedded in PDF: '+photo.cat,x+.3,3.8,8);}
  }
- await showPhoto(photos.find(x=>x.cat==='frente'||x.cat==='porche')||null,.86,'EXISTING SITE / BEFORE');
+ await showPhoto(photos.find(x=>x.id===s.site?.photoId)||photos.find(x=>x.cat==='frente'||x.cat==='porche')||null,.86,'EXISTING SITE / BEFORE');
  await showPhoto(photos.find(x=>x.cat==='render')||null,6.8,'PROPOSED IMAGE / AFTER');
  txt('SCHEMATIC ISOMETRIC - NOT APPROVED ENGINEERING',.86,6,9,true);
  const xscale=Math.min(.19,5.9/Math.max(G.W,1)),zscale=Math.min(.12,3/Math.max(G.D,1)),yscale=Math.min(.28,2.5/Math.max(G.H,1));
@@ -286,8 +301,10 @@ function mount({project,photos,host,save,notify}){
    if(source){s.site.enabled=true;s.site.photoId=source.id;}
  }
  const store=()=>{project.studioV17=s;save();};
+ if(!hadSite)store();
  const tell=notify||((message)=>alert(message));
  function render(){
+   const detailsWasOpen=host.querySelector('.v17-site-more')?.open===true;
    if(previousPreview){previousPreview.destroy();previousPreview=null;}
    const r=E.takeoff(s);
    const body={design:()=>design(s,r,project,photos),match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project));
@@ -295,6 +312,7 @@ function mount({project,photos,host,save,notify}){
     '<nav class="v17-nav" aria-label="Studio sections">'+[
     ['design','▧','Design'],['match','◐','Photo Match'],['docs','▤','Deliverables'],['buy','▦','Takeoff & Order']
    ].map(x=>'<button data-v17-tab="'+x[0]+'" '+(active===x[0]?'aria-current="page"':'')+'><span>'+x[1]+'</span>'+x[2]+'</button>').join('')+'</nav>'+body()+'</div>';
+   if(detailsWasOpen&&host.querySelector('.v17-site-more'))host.querySelector('.v17-site-more').open=true;
    host.querySelectorAll('[data-v17-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.v17Tab;render();});
    host.querySelectorAll('[data-v17-key]').forEach(input=>{
       input.onchange=()=>{
