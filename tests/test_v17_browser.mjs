@@ -16,6 +16,16 @@ try{
  };
  await set('width',30);await set('depth',20);await set('height',8);
  await page.locator('#v17-preview canvas').waitFor({timeout:20000});
+ await page.locator('[data-v17-key="doorWidthIn"]').fill('90');
+ await page.locator('[data-v17-key="doorWidthIn"]').dispatchEvent('change');
+ await page.getByText('Door needs adjustment:').waitFor();
+ await page.locator('[data-v17-key="doorWidthIn"]').fill('36');
+ await page.locator('[data-v17-key="doorWidthIn"]').dispatchEvent('change');
+ await page.locator('[data-v17-key="doorBay"]').selectOption('1');
+ await page.locator('[data-v17-key="doorHinge"]').selectOption('right');
+ await page.locator('[data-v17-key="doorHinge"]').selectOption('left');
+ await page.locator('[data-v17-key="doorOpen"]').check();
+ await page.locator('#v17-preview canvas').waitFor({timeout:20000});
  await page.screenshot({path:'qa-v17-mobile-design.png',fullPage:true});
  await page.locator('[data-v17-tab="docs"]').click();
  await page.getByText('01 Engineering & Plans').waitFor();
