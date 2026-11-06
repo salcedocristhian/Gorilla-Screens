@@ -67,26 +67,81 @@ function mount(host,s){
  const lowerY=H-.20;
  beam([0,lowerY,D],[W,lowerY,D],.10,.12);
  beam([0,lowerY,0],[0,lowerY,D],.10,.12);beam([W,lowerY,0],[W,lowerY,D],.10,.12);
- const doorWidth=Math.min(W*.45,Math.max(0,+s.doorWidth||3)),doorH=Math.min(H,Math.max(0,+s.doorHeight||6.667));
- if(s.doorCount>0&&doorWidth>0){
-  const dx=W*.5-doorWidth*.5;
-  beam([dx,0,D],[dx,doorH,D],.17,.17);
-  beam([dx+doorWidth,0,D],[dx+doorWidth,doorH,D],.17,.17);
-  beam([dx,doorH,D],[dx+doorWidth,doorH,D],.17,.17);
-  plane([[dx,0,D+.03],[dx+doorWidth,0,D+.03],[dx+doorWidth,doorH,D+.03],[dx,doorH,D+.03]],wallMat);
-  // No bottom track under door.
-  beam([0,.06,D],[dx,.06,D],.08,.12);
-  beam([dx+doorWidth,.06,D],[W,.06,D],.08,.12);
- }else beam([0,.06,D],[W,.06,D],.08,.12);
+ // Use the SAME bay-aware doorway geometry as the purchase takeoff.
+ const doorGeometry=window.GSSV17Engine.doorLayout(s);
+ const doors=doorGeometry.placements;
+ const doorAtBay=new Map(doors.map(d=>[d.bay,d]));
+ // Keep the stationary 1x2 bottom track OUT of the door openings.
+ let trackCursor=0;
+ doors.forEach(d=>{
+   if(d.x0-trackCursor>.001)beam([trackCursor,.06,D],[d.x0,.06,D],.08,.12);
+   trackCursor=d.x1;
+ });
+ if(W-trackCursor>.001)beam([trackCursor,.06,D],[W,.06,D],.08,.12);
  for(let x of [0,W])beam([x,.06,0],[x,.06,D],.08,.12);
+ // The chair rail also stops at the doorway, not across the swinging leaf.
  if(+s.chairHeight>0&&+s.chairHeight<H){
-  const cy=+s.chairHeight;
-  for(let side of [0,W])beam([side,cy,0],[side,cy,D],.17,.17);
-  if(s.doorCount>0){const dx=W*.5-doorWidth*.5;beam([0,cy,D],[dx,cy,D],.17,.17);beam([dx+doorWidth,cy,D],[W,cy,D],.17,.17);}
-  else beam([0,cy,D],[W,cy,D],.17,.17);
+   const cy=+s.chairHeight;
+   for(let side of [0,W])beam([side,cy,0],[side,cy,D],.17,.17);
+   let current=0;
+   doors.forEach(d=>{
+     if(d.x0-current>.001)beam([current,cy,D],[d.x0,cy,D],.17,.17);
+     current=d.x1;
+   });
+   if(W-current>.001)beam([current,cy,D],[W,cy,D],.17,.17);
  }
- // Schematic screen mesh on the exterior walls.
- plane([[0,.06,D],[W,.06,D],[W,H,D],[0,H,D]],wallMat);
+ // Fit the door within one existing bay. Preserve the screen above its header.
+ for(let i=0;i<bayCount;i++){
+   const bx0=W*i/bayCount,bx1=W*(i+1)/bayCount,door=doorAtBay.get(i);
+   const z=D+.008;
+   if(!door){
+     plane([[bx0,.06,z],[bx1,.06,z],[bx1,H,z],[bx0,H,z]],wallMat);
+     continue;
+   }
+   const {x0,x1,height}=door;
+   if(x0-bx0>.001)plane([[bx0,.06,z],[x0,.06,z],[x0,H,z],[bx0,H,z]],wallMat);
+   if(bx1-x1>.001)plane([[x1,.06,z],[bx1,.06,z],[bx1,H,z],[x1,H,z]],wallMat);
+   if(H-height>.001)plane([[x0,height,z],[x1,height,z],[x1,H,z],[x0,H,z]],wallMat);
+   // 2x2 stationary jambs/header.
+   beam([x0,0,D],[x0,height,D],.17,.17);
+   beam([x1,0,D],[x1,height,D],.17,.17);
+   beam([x0,height,D],[x1,height,D],.17,.17);
+   // Separate real leaf mesh, framed on four edges, rotating about its own hinges.
+   const hingeRight=s.doorHinge==='right',hingeX=hingeRight?x1:x0;
+   const pivot=new T.Group();
+   pivot.position.set(hingeX,0,D+.08);
+   scene.add(pivot);
+   function leafMember(a,b,cross=.10,deep=.13,mat=frameMat){
+     const v1=new T.Vector3(...a),v2=new T.Vector3(...b);
+     const delta=v2.clone().sub(v1),len=delta.length();
+     if(len<=0)return;
+     const item=new T.Mesh(new T.BoxGeometry(cross,len,deep),mat);
+     item.position.copy(v1.clone().add(v2).multiplyScalar(.5));
+     item.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());
+     pivot.add(item);objects.push(item);
+   }
+   const leafW=Math.max(.2,x1-x0-.12),leafH=Math.max(.3,height-.12),direction=hingeRight?-1:1;
+   const xx=direction*leafW;
+   leafMember([0,.10,0],[0,leafH,0]);
+   leafMember([xx,.10,0],[xx,leafH,0]);
+   leafMember([0,.10,0],[xx,.10,0]);
+   leafMember([0,leafH,0],[xx,leafH,0]);
+   leafMember([0,Math.min(3,leafH*.45),0],[xx,Math.min(3,leafH*.45),0],.10,.10);
+   const leafMesh=new T.BufferGeometry();
+   const leafVertices=[0,.12,0,xx,.12,0,xx,leafH-.03,0,0,.12,0,xx,leafH-.03,0,0,leafH-.03,0];
+   leafMesh.setAttribute('position',new T.Float32BufferAttribute(leafVertices,3));
+   leafMesh.computeVertexNormals();
+   const meshLeaf=new T.Mesh(leafMesh,new T.MeshStandardMaterial({color:0x779aa4,roughness:.8,transparent:true,opacity:.28,side:T.DoubleSide,depthWrite:false}));
+   pivot.add(meshLeaf);objects.push(meshLeaf);
+   // Visible handle and a compact top closer representation (conceptual).
+   const hardware=new T.MeshStandardMaterial({color:0x323a3c,metalness:.55,roughness:.4});
+   leafMember([xx-direction*.12,3.6,.1],[xx-direction*.12,3.95,.1],.09,.09,hardware);
+   leafMember([0,leafH-.19,0],[direction*.65,leafH-.19,0],.065,.09,hardware);
+   const open=s.doorOpen===true,angle=open?(Math.PI/3):0;
+   const outward=s.doorSwing!=='inward';
+   pivot.rotation.y=angle*(hingeRight?1:-1)*(outward?1:-1);
+ }
+ // Exterior side-wall screen remains complete.
  plane([[0,.06,0],[0,.06,D],[0,H,D],[0,H,0]],wallMat);
  plane([[W,.06,D],[W,.06,0],[W,H,0],[W,H,D]],wallMat);
  // Big beams span from house fascia z=0 toward the front enclosure z=D.
