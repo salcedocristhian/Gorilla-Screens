@@ -1,0 +1,260 @@
+/* Gorilla Screen Studio V17 — on-device Design-to-Purchase workspace.
+   Never issues supplier orders, claims AI photo reconstruction, or approves engineering. */
+(function(){
+'use strict';
+const E=window.GSSV17Engine;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>'$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt=n=>Number(n||0).toFixed(2)+' ft';
+const download=(filename,blob)=>{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);};
+let active='design',previousPreview=null;
+function field(k,label,value,type='number',step='.25',extra=''){
+ const props=type==='checkbox'?'type="checkbox" '+(value?'checked':''):'type="'+type+'" value="'+esc(value===null?'':value)+'" '+(type==='number'?'step="'+step+'" min="0"':'');
+ return '<label class="v17-field"><span>'+esc(label)+'</span><input data-v17-key="'+esc(k)+'" '+props+' '+extra+'></label>';
+}
+function select(k,label,val,options){
+ return '<label class="v17-field"><span>'+esc(label)+'</span><select data-v17-key="'+esc(k)+'">'+options.map(o=>'<option value="'+esc(o[0])+'" '+(String(o[0])===String(val)?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select></label>';
+}
+function action(name,text,kind='sec'){return '<button class="btn '+kind+'" data-v17-action="'+name+'">'+text+'</button>';}
+function info(text){return '<div class="v17-note">'+text+'</div>';}
+function design(s,r,p){
+ const types=[['mansard','Mansard'],['flat','Flat screen'],['gable','Gable'],['irp','IRP Solid'],['mixed','Mixed IRP + Screen']];
+ const profileOptions=vals=>vals.map(v=>[v,v.replace('x','×')]);
+ return '<div class="v17-grid"><section class="card"><div class="v17-cardhead"><div><div class="cap">LIVE GEOMETRY</div><h2>Enclosure · 3D</h2></div><span class="v17-pill">Concept design</span></div>'+
+   '<div id="v17-preview" class="v17-stage"><div class="v17-stage-empty">Introduce ancho, profundidad y altura para visualizar la estructura.</div></div>'+
+   '<div class="v17-metrics"><div><b>'+fmt(r.geometry.W)+'</b><small>Front width</small></div><div><b>'+fmt(r.geometry.D)+'</b><small>Depth</small></div><div><b>'+fmt(r.geometry.H)+'</b><small>Wall height</small></div></div>'+
+   info('Perfiles y conexiones son presets geométricos, sujetos a ingeniería de viento, anclajes y cimentación. Ninguna cota se infiere de las fotos.')+
+   '</section><div><section class="card"><div class="cap">01 · DATOS DEL ENCLOSURE</div>'+
+   '<div class="v17-fields">'+field('width','Front wall · feet',s.width)+field('depth','Depth · feet',s.depth)+field('height','Height · feet',s.height)+
+   select('roof','Roof type',s.roof,types)+select('finish','Aluminum finish',s.finish,[['white','White'],['bronze','Dark Bronze']])+
+   select('mesh','Screen mesh',s.mesh,['Standard 18x14 fiberglass','No-See-Um','Pet Screen','Privacy Screen'].map(x=>[x,x]))+
+   field('wallTarget','Target wall bay · feet',s.wallTarget)+field('roofTarget','Target roof grid · feet',s.roofTarget)+
+   ((s.roof==='mansard'||s.roof==='gable')?field('mansardRise','Roof rise · feet',s.mansardRise):'')+
+   (s.roof==='mansard'?field('mansardInset','Mansard inset · feet',s.mansardInset):'')+
+   (s.roof==='mixed'?field('irpDepth','Solid IRP depth · feet',s.irpDepth):'')+
+   '</div><div class="v17-checkrow">'+field('verified','I verified these measurements on site',s.verified,'checkbox')+'</div></section>'+
+   '<section class="card"><div class="cap">02 · FRAMING & FEATURES</div><div class="v17-fields">'+
+   select('postProfile','Wall posts',s.postProfile,profileOptions(['2x3','2x4','2x5','2x6','2x7','2x8']))+
+   select('beamProfile','Big beams · house to front',s.beamProfile,profileOptions(['2x6','2x8','2x10']))+
+   select('crossProfile','Secondary roof traverses',s.crossProfile,profileOptions(['2x2','2x3','2x4']))+
+   select('topRoofProfile','Upper roof spline / beam receiver',s.topRoofProfile,profileOptions(['2x2','2x3','2x4']))+
+   select('topWallProfile','Lower wall spline channel',s.topWallProfile,profileOptions(['1x2','2x2']))+
+   select('chairProfile','Chair rail profile',s.chairProfile,profileOptions(['2x2','2x3']))+
+   field('chairHeight','Chair rail height · feet (0 = off)',s.chairHeight)+
+   field('doorCount','Single doors · quantity',s.doorCount,'number','1')+
+   field('doorWidth','Door width · feet',s.doorWidth)+field('doorHeight','Door height · feet',s.doorHeight)+
+   field('gutterSize','Super gutter size · inches',s.gutterSize,'number','1')+
+   field('downspouts','Downspouts · quantity',s.downspouts,'number','1')+
+   '</div><div class="v17-checkrow">'+field('pictureView','Picture View · preliminary opening mode',s.pictureView,'checkbox')+
+   field('gutterEnabled','Include house fascia super gutter',s.gutterEnabled,'checkbox')+'</div>'+
+   info('Default: top horizontal 2×2 for roof screen framing, immediately below 1×2 for wall screen — on front AND side walls. Profile lengths are counted independently.')+
+   '<div class="v17-metrics"><div><b>'+r.geometry.frontBays+'</b><small>Front bays</small></div><div><b>'+r.geometry.postCount+'</b><small>Posts (concept)</small></div><div><b>'+r.geometry.meshArea+' ft²</b><small>Mesh area (gross)</small></div></div></section></div></div>';
+}
+function photo(s,photos){
+ const m=s.match;const choices=photos.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.cat+' · '+new Date(x.createdAt).toLocaleDateString('en-US'))+'</option>').join('');
+ const before=photos.find(x=>x.id===m.before)||photos.find(x=>['frente','porche','street'].includes(x.cat));
+ const after=photos.find(x=>x.id===m.after)||photos.find(x=>x.cat==='render');
+ if(before&&!m.before)m.before=before.id;if(after&&!m.after)m.after=after.id;
+ const split=E.round(m.split);
+ return '<section class="card"><div class="v17-cardhead"><div><div class="cap">PHOTO MATCH STUDIO</div><h2>Before / After</h2></div><span class="v17-pill">Manual alignment · V17</span></div>'+
+   info('Selecciona una foto real y un render del MISMO proyecto, con una perspectiva similar. El slider compara ambas imágenes. Photo Match automático con IA aún requiere un servicio externo.')+
+   '<div class="v17-fields"><label class="v17-field"><span>Before · real photo</span><select data-v17-match="before"><option value="">Select photo</option>'+choices+'</select></label>'+
+   '<label class="v17-field"><span>After · 3D render</span><select data-v17-match="after"><option value="">Select render</option>'+choices+'</select></label></div>'+
+   (before&&after?'<div class="v17-compare" id="v17-compare"><img src="'+esc(before.url)+'" alt="Before photo">'+
+      '<img class="v17-after" src="'+esc(after.url)+'" alt="Proposed render" style="clip-path:inset(0 0 0 '+split+'%);transform:translate('+E.round(m.x)+'px,'+E.round(m.y)+'px) scale('+(E.round(m.scale)/100)+')">'+
+      '<div class="v17-splitline" style="left:'+split+'%"><span>↔</span></div><span class="v17-photo-label left">BEFORE</span><span class="v17-photo-label right">AFTER</span></div>':
+      '<div class="v17-placeholder">Add real site photos and an image categorized “Render propuesto” in the Fotos tab to enable this comparison.</div>')+
+   '<div class="v17-sliders"><label>Reveal <strong id="v17-splitval">'+split+'%</strong><input data-v17-match="split" type="range" min="0" max="100" value="'+split+'"></label>'+
+   '<label>Render scale <strong>'+E.round(m.scale)+'%</strong><input data-v17-match="scale" type="range" min="60" max="160" value="'+E.round(m.scale)+'"></label>'+
+   '<div class="v17-fields">'+field('matchX','Offset X · pixels',m.x,'number','1')+field('matchY','Offset Y · pixels',m.y,'number','1')+'</div></div>'+
+   '<p class="lead smalltext">Si el render no proviene de una cámara calibrada, el resultado es una comparativa visual, no una superposición geométricamente verificada.</p></section>';
+}
+function deliverables(s,r,photos){
+ const ready=r.geometry.valid,hasAerial=photos.some(x=>x.cat==='aerea');
+ return '<section class="card"><div class="cap">DELIVERABLES STUDIO · 11×17</div><h2>Document Package</h2>'+
+   '<p class="lead">Tres entregables siguiendo la presentación de proyectos profesionales; se generan a partir de medidas ingresadas, nunca de cotas inventadas.</p>'+
+   '<div class="v17-docgrid"><article><div class="v17-docpreview"><svg viewBox="0 0 160 100"><g fill="none" stroke="currentColor" stroke-width="1.1"><rect x="18" y="18" width="100" height="60"/><path d="M18 50H118M38 18V78M58 18V78M78 18V78M98 18V78M8 85H130M8 12H130"/></g></svg></div><h3>01 Engineering & Plans</h3><p>Footprint, elevations, roof grid, framing schedule, dimensions, profiles and notes.</p></article>'+
+   '<article><div class="v17-docpreview"><svg viewBox="0 0 160 100"><g fill="none" stroke="currentColor" stroke-width="1.4"><path d="M26 35L102 18L141 43L63 62Z M26 35V78L63 94V62 M141 43V82L63 94 M102 18V65 M53 29V90M79 24V89M117 27V82"/></g></svg></div><h3>02 Layout Visualization</h3><p>3D editable framing, photo-match references and an illustrative enclosure view.</p></article>'+
+   '<article><div class="v17-docpreview"><svg viewBox="0 0 160 100"><g fill="none" stroke="currentColor" stroke-width="1.1"><path stroke-dasharray="3 2" d="M10 10H151V89H10Z"/><rect x="29" y="29" width="86" height="43"/><path d="M50 29V72 M29 52H115 M10 95H150"/></g></svg></div><h3>03 Site Planning</h3><p>Proposed footprint and survey/aerial reference; actual lot lines and setbacks require a valid survey.</p></article></div>'+
+   '<div class="v17-btnrow">'+action('pdf','↓ Generate Conceptual PDF','')+action('csv','↓ Export Cutting Plan CSV')+'</div>'+
+   info((ready?'Geometry is entered. ':'Enter dimensions first. ')+(s.verified?'Field measurements marked verified. ':'Unverified measurements are labeled on export. ')+(hasAerial?'Aerial reference available.':'No project aerial: no property boundary will be inferred.'))+
+   '<p class="lead smalltext"><strong>Not for permitting:</strong> No sealed engineering, structural analysis, survey or AHJ approvals are produced by this module.</p></section>';
+}
+function purchasing(s,r,p){
+ const status=E.orderStatus(s,p),ready=r.geometry.valid&&s.verified&&!r.unresolved.length,priced=E.price(s,r);
+ const table=r.rows.length?'<div class="v17-tablewrap"><table class="v17-table"><thead><tr><th>Profile / finish</th><th>Net LF</th><th>Commercial bars</th><th>Price / LF</th></tr></thead><tbody>'+
+    r.rows.map(row=>{
+      const grouped={};row.bars.forEach(b=>{const key=String(b.length);grouped[key]=(grouped[key]||0)+1;});
+      return '<tr><td><b>'+esc(row.profile)+'</b><small>'+esc(s.finish==='white'?'White':'Dark Bronze')+'</small></td><td>'+row.footage.toFixed(1)+'</td><td>'+
+        Object.entries(grouped).map(([len,qty])=>esc(qty+' × '+len+' ft')).join('<br>')+
+        (row.reserves?' <small>('+row.reserves+' reserve)</small>':'')+'</td><td><input class="v17-cost" data-v17-cost="'+esc(row.profile)+'" type="number" min="0" step=".01" placeholder="Not set" value="'+esc(s.costs[row.profile]??'')+'"></td></tr>';
+    }).join('')+'</tbody></table></div>':'<div class="v17-placeholder">Enter project dimensions to calculate commercial stock.</div>';
+ const priceTxt=priced?'<div class="v17-price"><span>Calculated selling price</span><strong>'+money(priced.sellingPrice)+'</strong><small>Estimated materials '+money(priced.material)+' · labor '+money(priced.labor)+' · overhead '+money(priced.overhead)+'</small></div>':info('Pricing incomplete. Add verified supplier cost per purchased LF, labor, overhead and target gross margin. No default price will be invented.');
+ const statusClass=status==='APPROVED'?'v17-success':status==='OUTDATED'?'v17-warning':'';
+ return '<section class="card"><div class="v17-cardhead"><div><div class="cap">TAKEOFF → PROCUREMENT</div><h2>Material Purchase List</h2></div><span class="v17-pill '+statusClass+'">'+status+'</span></div>'+
+   '<div class="v17-fields">'+select('supplier','Supplier',s.supplier,[['Town & Country / ABC Outdoor Solutions','Town & Country / ABC Outdoor Solutions'],['Lansing Building Products','Lansing Building Products'],['Other','Other / Custom']])+
+   field('waste','Reserve allowance · %',s.waste,'number','1')+
+   field('stock24','Commercial stock A · ft',s.stocks[0]||24)+field('stock30','Commercial stock B · ft',s.stocks[1]||30)+
+   field('supplierPhone','Supplier phone (enter actual number)',s.supplierPhone,'tel')+
+   field('supplierEmail','Supplier email (enter actual address)',s.supplierEmail,'email')+'</div>'+
+   '<div class="v17-metrics"><div><b>'+r.rows.length+'</b><small>Profile types</small></div><div><b>'+r.rows.reduce((t,x)=>t+x.bars.length,0)+'</b><small>Commercial bars</small></div><div><b>'+fmt(r.rows.reduce((t,x)=>t+x.purchased,0))+'</b><small>Purchase length</small></div></div>'+
+   table+(r.unresolved.length?info('<b>BLOCKED:</b> '+r.unresolved.length+' continuous pieces exceed configured commercial stock. Confirm lengths, approved splices or an alternate supplier; do not order automatically.'):'')+
+   '<div class="v17-btnrow">'+action('csv','↓ Export full cutting plan CSV')+action('approve','✓ Approve purchase list','')+'</div>'+
+   '<hr class="v17-rule"><div class="cap">ESTIMATE · PRIVATE COMPANY RATES</div><div class="v17-fields">'+field('laborPerSqft','Labor · $ per developed ft²',s.laborPerSqft)+
+   field('overhead','Overhead / equipment / permits · $',s.overhead)+field('targetMargin','Target gross margin · %',s.targetMargin,'number','1')+'</div>'+priceTxt+
+   '<hr class="v17-rule"><div class="cap">MANUAL PURCHASE HANDOFF</div>'+
+   (status==='OUTDATED'?info('<b>Outdated order:</b> project geometry, profiles or verification changed. Recalculate and approve again before preparing the email.'):'')+
+   '<p class="lead smalltext">Gorilla never places a real order. Approval is local and only unlocks a draft email/call. A human must check quantities, pricing, specifications and the vendor quotation.</p>'+
+   '<div class="v17-btnrow">'+action('email','↗ Prepare supplier email')+action('phone','☎ Call supplier')+'</div></section>';
+}
+function generateCSV(s,r,p){
+ const header=['Supplier,Profile,Finish,Stock length ft,Bar #,Cut lengths ft,Offcut ft,Reserve'];
+ const rows=[];r.rows.forEach(group=>group.bars.forEach((bar,i)=>{
+  const v=[s.supplier,group.profile,s.finish,String(bar.length),String(i+1),bar.cuts.map(c=>c.length.toFixed(2)+' ('+c.use+')').join(' | '),String(bar.remaining),bar.reserve?'YES':'NO'];
+  rows.push(v.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(','));
+ }));
+ return new Blob(['# Preliminary cutting list; unengineered profiles, supplier lengths require verification\n'+header.concat(rows).join('\r\n')+'\r\n'],{type:'text/csv;charset=utf-8'});
+}
+async function generatePDF(p,s,r,photos){
+ if(!r.geometry.valid)throw Error('Enter width, depth and height first.');
+ if(!window.jspdf?.jsPDF)throw Error('PDF library is not loaded.');
+ const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'in',format:[11,17],compress:true});
+ const G=r.geometry,black=[34,40,50],grey=[109,117,128],blue=[31,80,141],ft=(x)=>Number(x).toFixed(2)+' ft';
+ let page=0;
+ function txt(str,x,y,size=9,bold=false,color=black){doc.setTextColor(...color);doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);doc.text(String(str).replace(/[^\x20-\x7E]/g,'-'),x,y);}
+ function line(x1,y1,x2,y2){doc.setDrawColor(...black);doc.setLineWidth(.012);doc.line(x1,y1,x2,y2);}
+ function sheet(no,title){
+  if(page++)doc.addPage();doc.setDrawColor(...grey);doc.rect(.35,.35,16.3,10.3);
+  line(13.5,.35,13.5,10.65);txt('GORILLA SCREEN STUDIO',.66,.8,17,true,blue);
+  txt(title,.66,1.13,12,true);txt('PRELIMINARY CONCEPT / NOT FOR PERMIT',.66,1.37,8,true,[170,62,39]);
+  txt('PROJECT',13.75,.95,9,true);const addr=(p.address||'Address not entered').slice(0,35);
+  doc.setFontSize(8);doc.setTextColor(...grey);doc.text(doc.splitTextToSize(addr,2.4),13.75,1.22);
+  txt('CLIENT',13.75,1.92,9,true);txt((p.client?.name||'Not entered').slice(0,30),13.75,2.18,8);
+  txt('DIMENSION STATUS',13.75,2.88,9,true);txt(s.verified?'FIELD-VERIFIED (USER ATTESTED)':'ESTIMATED / NOT VERIFIED',13.75,3.14,7,true);
+  txt('REVISION',13.75,3.77,9,true);txt('V17 / '+s.revision,13.75,4.04,8);
+  txt('DISCLAIMER',13.75,5.05,9,true);
+  const lines=doc.splitTextToSize('No engineered spans, footing, anchors, wind loads, property boundary or setbacks are approved or established by this conceptual drawing.',2.35);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text(lines,13.75,5.38);
+  txt(no,15.5,10.3,20,true);txt(new Date().toLocaleDateString('en-US'),13.75,9.65,8);
+ }
+ function rectFrame(x,y,w,h){doc.setDrawColor(...black);doc.setLineWidth(.018);doc.rect(x,y,w,h);}
+ sheet('A-101','ENCLOSURE PLAN / FRONT ELEVATION');
+ const boxX=1.25,boxY=2,scale=Math.min(9/Math.max(G.W,.1),3.1/Math.max(G.D,.1)),w=G.W*scale,d=G.D*scale;
+ rectFrame(boxX,boxY,w,d);for(let i=1;i<G.frontBays;i++)line(boxX+w*i/G.frontBays,boxY,boxX+w*i/G.frontBays,boxY+d);
+ txt('HOUSE / FASCIA',boxX,boxY-.17,9);txt('FRONT '+ft(G.W),boxX,boxY+d+.24,9,true);txt('DEPTH '+ft(G.D),boxX+w+.2,boxY+d/2,9);
+ let ey=6.4,ew=Math.min(9.3,G.W*scale),eh=2.6;rectFrame(boxX,ey,ew,eh);
+ for(let i=1;i<G.frontBays;i++)line(boxX+ew*i/G.frontBays,ey,boxX+ew*i/G.frontBays,ey+eh);
+ line(boxX,ey+eh*.64,boxX+ew,ey+eh*.64);
+ txt('FRONT ELEVATION - '+ft(G.W)+' x '+ft(G.H),boxX,ey+eh+.25,10,true);
+ txt('TOP: '+s.topRoofProfile+' roof / '+s.topWallProfile+' wall spline - counted separately',boxX,10,8);
+ sheet('A-102','ROOF FRAMING / PROFILE SCHEDULE');
+ const rx=1.15,ry=2.1,rs=Math.min(10/Math.max(G.W,.1),5.7/Math.max(G.D,.1)),rw=G.W*rs,rd=G.D*rs;
+ rectFrame(rx,ry,rw,rd);
+ for(let i=1;i<G.frontBays;i++)line(rx+rw*i/G.frontBays,ry,rx+rw*i/G.frontBays,ry+rd);
+ for(let j=1;j<G.roofRows;j++)line(rx,ry+rd*j/G.roofRows,rx+rw,ry+rd*j/G.roofRows);
+ txt('HOUSE SUPER GUTTER / CONNECTION - FIELD VERIFY',rx,ry-.25,8);
+ txt('FRONT RECEIVER: '+s.topRoofProfile,rx,ry+rd+.3,9,true);
+ txt('ROOF TYPE '+s.roof.toUpperCase()+'   | BIG BEAM '+s.beamProfile+'   | TRAVERSE '+s.crossProfile,rx,9.1,11,true);
+ txt('Roof panel target ~'+s.roofTarget+' ft; framing schematic only. Engineer must check spans and sections.',rx,9.5,8);
+ sheet('SP-101','SITE PLANNING / PROPERTY LOCATION');
+ rectFrame(1.45,2.4,10.7,6.7);
+ txt('PROPERTY SURVEY / LOT LIMITS: NOT PROVIDED BY APP',1.8,3.0,10,true);
+ txt('No assumed property boundaries, zoning setbacks, slab or footing adequacy.',1.8,3.4,9);
+ doc.setDrawColor(...blue);doc.setLineWidth(.024);const sw=Math.min(5,G.W*.12),sd=Math.min(3,G.D*.12);
+ doc.rect(3.1,4.25,sw,sd);txt('PROPOSED ENCLOSURE FOOTPRINT',3.1,4.05,9,true,blue);
+ txt(ft(G.W)+' x '+ft(G.D)+'  | '+G.footprint+' sq ft',3.1,4.25+sd+.32,9);
+ txt(photos.some(x=>x.cat==='aerea')?'Aerial image is available in this project. Survey dimensions still required.':'No site aerial or survey included in this conceptual exhibit.',1.8,8.55,9);
+ sheet('Q-101','MATERIAL TAKEOFF / COMMERCIAL CUT SUMMARY');
+ txt('ALUMINUM FINISH: '+(s.finish==='white'?'WHITE':'DARK BRONZE')+'   | WASTE RESERVE: '+s.waste+'%',.86,1.85,11,true);
+ txt('Stock assumptions: '+s.stocks.join(', ')+' ft  | Supplier: '+s.supplier,.86,2.15,9);
+ txt('PROFILE',.86,2.68,9,true);txt('NET FT',3.5,2.68,9,true);txt('PURCHASE BARS',5,2.68,9,true);txt('STOCK FT',10.3,2.68,9,true);
+ line(.82,2.83,12.9,2.83);let ty=3.14;
+ r.rows.slice(0,25).forEach(row=>{
+  const stock={};row.bars.forEach(b=>stock[b.length]=(stock[b.length]||0)+1);
+  txt(row.profile,.86,ty,10,true);txt(row.footage.toFixed(2),3.5,ty,9);
+  txt(Object.entries(stock).map(([length,count])=>count+' x '+length+' ft').join('  '),5,ty,9);
+  txt(row.purchased.toFixed(2),10.3,ty,9);ty+=.30;
+ });
+ txt('Screen mesh gross: '+G.meshArea+' sq ft  | Solid roof footprint: '+G.solidRoofArea+' sq ft',.86,Math.min(10.15,ty+.40),10,true);
+ txt(r.unresolved.length?'WARNING: Pieces longer than commercial stock - procurement blocked.':'Cutting list available as a separate CSV export.',.86,10.35,8);
+ return doc.output('blob');
+}
+function mount({project,photos,host,save,notify}){
+ if(previousPreview){previousPreview.destroy();previousPreview=null;}
+ let s=E.get(project);project.studioV17=s;
+ const store=()=>{project.studioV17=s;save();};
+ const tell=notify||((message)=>alert(message));
+ function render(){
+   if(previousPreview){previousPreview.destroy();previousPreview=null;}
+   const r=E.takeoff(s);
+   const body={design:()=>design(s,r,project),match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project));
+   host.innerHTML='<div class="v17-shell"><header class="v17-heading"><div><div class="cap">GORILLA SCREEN STUDIO · V17 WORKSPACE</div><h1>Design to Purchase</h1><p class="lead">Diseña, presenta, calcula y prepara compras — sin perder el control humano.</p></div><span class="v17-beta">FIELD PILOT</span></header>'+
+    '<nav class="v17-nav" aria-label="Studio sections">'+[
+    ['design','▧','Design'],['match','◐','Photo Match'],['docs','▤','Deliverables'],['buy','▦','Takeoff & Order']
+   ].map(x=>'<button data-v17-tab="'+x[0]+'" '+(active===x[0]?'aria-current="page"':'')+'><span>'+x[1]+'</span>'+x[2]+'</button>').join('')+'</nav>'+body()+'</div>';
+   host.querySelectorAll('[data-v17-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.v17Tab;render();});
+   host.querySelectorAll('[data-v17-key]').forEach(input=>{
+      input.onchange=()=>{
+        let key=input.dataset.v17Key,value=input.type==='checkbox'?input.checked:input.value;
+        if(key==='stock24'||key==='stock30'){s.stocks[key==='stock24'?0:1]=Number(value)||0;}
+        else if(key==='matchX'||key==='matchY'){s.match[key==='matchX'?'x':'y']=Number(value)||0;}
+        else if(input.type==='number'){s[key]=value===''?0:Number(value);}
+        else s[key]=value;
+        if(key==='finish')project.frameColor=value;
+        store();render();
+      };
+   });
+   host.querySelectorAll('[data-v17-match]').forEach(input=>{
+      input.value=s.match[input.dataset.v17Match]||input.value;
+      input.oninput=()=>{
+        const k=input.dataset.v17Match,val=input.type==='range'?Number(input.value):input.value;
+        s.match[k]=val;
+        if(k==='split'){
+          const after=host.querySelector('.v17-after'),line=host.querySelector('.v17-splitline');
+          if(after)after.style.clipPath='inset(0 0 0 '+val+'%)';
+          if(line)line.style.left=val+'%';
+          const label=host.querySelector('#v17-splitval');if(label)label.textContent=val+'%';
+        }
+      };
+      input.onchange=()=>{store();render();};
+   });
+   host.querySelectorAll('[data-v17-cost]').forEach(input=>{input.onchange=()=>{const k=input.dataset.v17Cost;s.costs[k]=input.value===''?null:Number(input.value);store();render();};});
+   host.querySelectorAll('[data-v17-action]').forEach(b=>b.onclick=async()=>{
+      b.disabled=true;
+      try{
+       const kind=b.dataset.v17Action,report=E.takeoff(s),valid=report.geometry.valid;
+       if(kind==='csv'){if(!valid)throw Error('Introduce dimensiones primero.');download('Gorilla-Cutting-Plan-'+project.id+'.csv',generateCSV(s,report,project));}
+       if(kind==='pdf'){const blob=await generatePDF(project,s,report,photos);download('Gorilla-Concept-Drawings-'+project.id+'.pdf',blob);}
+       if(kind==='approve'){
+         if(!valid||!s.verified)throw Error('Verifica y confirma las medidas de campo antes de aprobar.');
+         if(report.unresolved.length)throw Error('Hay piezas mayores que la longitud comercial; resuelve splices/stock primero.');
+         if(!confirm('¿Aprobar la lista conceptual de compra? No se enviará ninguna orden.')){b.disabled=false;return;}
+         s.approvedOrder={signature:E.signature(s,project),approvedAt:Date.now()};
+         store();tell('Lista revisada y aprobada localmente. Envío todavía manual.');render();
+       }
+       if(kind==='email'){
+         if(E.orderStatus(s,project)!=='APPROVED')throw Error('Primero aprueba la lista vigente. Cambios requieren nueva aprobación.');
+         if(!s.supplierEmail||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.supplierEmail))throw Error('Ingresa un email real del proveedor.');
+         const lines=['REQUEST FOR QUOTE — Gorilla Screen Studio',project.address||'Project address pending','Supplier: '+s.supplier,'Finish: '+(s.finish==='white'?'White':'Dark Bronze'),'Please confirm sizes, availability, stock lengths, SKU, cost, and delivery before ordering.','','Material request:'];
+         report.rows.forEach(row=>{const bars={};row.bars.forEach(x=>bars[x.length]=(bars[x.length]||0)+1);lines.push(row.profile+': '+Object.entries(bars).map(([len,count])=>count+' bars x '+len+' ft').join(', '));});
+         lines.push('','This is a quotation request only, not an authorized purchase order.');
+         location.href='mailto:'+encodeURIComponent(s.supplierEmail)+'?subject='+encodeURIComponent('RFQ Gorilla — '+(project.address||'Project'))+'&body='+encodeURIComponent(lines.join('\n'));
+       }
+       if(kind==='phone'){
+         if(E.orderStatus(s,project)!=='APPROVED')throw Error('Primero aprueba la lista actual.');
+         const number=String(s.supplierPhone).replace(/[^\d+]/g,'');
+         if(!number)throw Error('Ingresa el teléfono verdadero del proveedor antes de llamar.');
+         location.href='tel:'+number;
+       }
+      }catch(ex){tell(ex.message||'Operation could not be completed.');}
+      finally{b.disabled=false;}
+   });
+   if(active==='design'&&r.geometry.valid&&window.GSSV17Preview){
+      try{previousPreview=window.GSSV17Preview.mount(host.querySelector('#v17-preview'),s);}
+      catch(e){console.warn('V17 preview unavailable',e); const stage=host.querySelector('#v17-preview');if(stage)stage.textContent='Vista 3D no disponible. Cálculos y documentos siguen accesibles.';}
+   }
+ }
+ render();
+}
+window.GSSV17={mount};
+})();
