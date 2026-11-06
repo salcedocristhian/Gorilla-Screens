@@ -127,7 +127,7 @@
   function price(s,report){
     const priced=report.rows.length>0&&report.rows.every(r=>Number(s.costs[r.profile])>0);
     const labor=n(s.laborPerSqft,-1),overhead=n(s.overhead,-1),margin=n(s.targetMargin,-1);
-    if(!priced||labor<0||overhead<0||margin<=0||margin>=100)return null;
+    if(!priced||s.laborPerSqft===null||s.laborPerSqft===''||s.overhead===null||s.overhead===''||s.targetMargin===null||s.targetMargin===''||labor<0||overhead<0||margin<=0||margin>=100)return null;
     const material=report.rows.reduce((t,r)=>t+r.purchased*n(s.costs[r.profile]),0);
     const laborCost=labor*(report.geometry.wallArea+report.geometry.screenRoofArea+report.geometry.solidRoofArea);
     return {material:round(material),labor:round(laborCost),overhead:round(overhead),
