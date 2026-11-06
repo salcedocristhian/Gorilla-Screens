@@ -14,7 +14,7 @@
     finish:'white',mesh:'Standard 18x14 fiberglass',postProfile:'2x5',beamProfile:'2x8',
     crossProfile:'2x2',topRoofProfile:'2x2',topWallProfile:'1x2',chairProfile:'2x2',
     bottomProfile:'1x2',chairHeight:3,wallTarget:6,roofTarget:6,
-    doorCount:1,doorWidth:3,doorHeight:80/12,
+    doorCount:1,doorWidth:3,doorHeight:80/12,doorBay:null,doorHinge:'left',doorSwing:'outward',doorOpen:false,
     gutterSize:7,gutterEnabled:true,downspouts:2,waste:10,stocks:[24,30],
     supplier:'Town & Country / ABC Outdoor Solutions',supplierPhone:'',supplierEmail:'',
     costs:{},laborPerSqft:null,overhead:null,targetMargin:null,revision:1,
@@ -45,6 +45,48 @@
       solidRoofArea:round(solidArea),meshArea:round(wallArea+roofArea),doorArea:round(doorArea),
       footprint:round(W*D),totalPerimeter:round(W+2*D),postCount:valid?((s.pictureView?2:frontBays+1)+2*sideBays):0};
   }
+  // Single source of truth for front-wall door cutouts, frame quantity and 3D rendering.
+  // Bay indices run left-to-right in model X coordinates. No post is allowed within a door.
+  function doorLayout(s) {
+    const g=geometry(s),placements=[],issues=[];
+    if(!g.valid)return {placements,issues:['Enclosure dimensions are required.'],bayWidth:0};
+    const bayWidth=g.W/g.frontBays,raw=Number(s.doorCount??0);
+    const count=Math.floor(raw);
+    if(!Number.isInteger(raw)||count<0||count>g.frontBays){
+      issues.push('Door quantity must be between 0 and '+g.frontBays+' front-wall bays.');
+    }
+    if(count<=0)return {placements,issues,bayWidth};
+    const width=Number(s.doorWidth),height=Number(s.doorHeight);
+    if(!Number.isFinite(width)||width<2||width>8||width>bayWidth-0.30){
+      issues.push('36-inch nominal door must fit inside one wall bay with 2×2 jamb clearance. Increase the bay width or reduce the door width.');
+    }
+    if(!Number.isFinite(height)||height<5||height>g.H-0.20){
+      issues.push('Door height plus 2×2 header must remain below the upper wall framing. Increase wall height or reduce door height.');
+    }
+    if(issues.length)return {placements,issues,bayWidth};
+    const base=s.doorBay===null||s.doorBay===undefined||s.doorBay===''?Math.floor((g.frontBays-1)/2):Math.floor(Number(s.doorBay));
+    if(!Number.isFinite(base)||base<0||base>=g.frontBays){
+      issues.push('Select a valid front-wall bay for the door.');
+      return {placements,issues,bayWidth};
+    }
+    for(let i=0;i<count;i++){
+      const bay=(base+i)%g.frontBays;
+      const bayLeft=bay*bayWidth,x0=bayLeft+(bayWidth-width)/2;
+      placements.push({bay,x0:round(x0),x1:round(x0+width),width:round(width),height:round(height)});
+    }
+    placements.sort((a,b)=>a.x0-b.x0);
+    return {placements,issues,bayWidth};
+  }
+  // Return the uninterrupted linear lengths remaining between doorway cutouts.
+  function frontRuns(width,doors){
+    let cursor=0;const segments=[];
+    for(const d of doors){
+      if(d.x0-cursor>.005)segments.push(round(d.x0-cursor));
+      cursor=d.x1;
+    }
+    if(width-cursor>.005)segments.push(round(width-cursor));
+    return segments;
+  }
   function segments(s) {
     const g=geometry(s),out=[];
     if(!g.valid) return out;
@@ -57,17 +99,21 @@
     add(s.topRoofProfile,g.D,2,'Upper roof spline/beam receiver · sides');
     add(s.topWallProfile,g.W,1,'Lower wall spline channel · front');
     add(s.topWallProfile,g.D,2,'Lower wall spline channel · sides');
-    let doorW=clamp(s.doorCount,0,10)*clamp(s.doorWidth,2,8);
-    // The door interrupts the lower track and chair rail; the rest remains continuous.
-    const frontClear=Math.max(0,g.W-doorW);
-    add(s.bottomProfile,frontClear,1,'Bottom track · front excluding door');
+    const doors=doorLayout(s);
+    const runs=frontRuns(g.W,doors.placements);
+    runs.forEach(length=>add(s.bottomProfile,length,1,'Bottom track · front excluding door'));
     add(s.bottomProfile,g.D,2,'Bottom track · sides');
     if(s.chairHeight>0 && s.chairHeight<g.H) {
-      add(s.chairProfile,frontClear,1,'36-inch chair rail (editable) · front excluding door');
+      runs.forEach(length=>add(s.chairProfile,length,1,'Chair rail · front interrupted at door'));
       add(s.chairProfile,g.D,2,'Chair rail · sides');
     }
-    add('2x2',clamp(s.doorHeight,5,10),2*clamp(s.doorCount,0,10),'Door jambs');
-    add('2x2',clamp(s.doorWidth,2,8),clamp(s.doorCount,0,10),'Door headers');
+    doors.placements.forEach(door=>{
+      add('2x2',door.height,2,'Door jambs');
+      add('2x2',door.width,1,'Door headers');
+      // Preliminary leaf-frame lengths; hinge, closer, latch and manufacturer door kit are separate verification items.
+      add('1x2',door.height-.06,2,'Screen door leaf vertical stiles · preliminary');
+      add('1x2',door.width-.06,2,'Screen door leaf horizontal rails · preliminary');
+    });
     // Primary roof direction is from the house-side super gutter toward the front wall.
     const beams=g.frontBays+1;
     add(s.beamProfile,g.D,beams,'Primary big beams · house to front');
@@ -113,7 +159,7 @@
     // Keep approval stable across price-only edits; invalidate for changed geometry/cut rules.
     return JSON.stringify({revision:s.revision,width:s.width,depth:s.depth,height:s.height,verified:s.verified,roof:s.roof,
       mansardRise:s.mansardRise,mansardInset:s.mansardInset,irpDepth:s.irpDepth,pictureView:s.pictureView,
-      finish:s.finish,mesh:s.mesh,supplier:s.supplier,costs:s.costs,postProfile:s.postProfile,beamProfile:s.beamProfile,crossProfile:s.crossProfile,
+      finish:s.finish,mesh:s.mesh,supplier:s.supplier,costs:s.costs,doorBay:s.doorBay,doorHinge:s.doorHinge,doorSwing:s.doorSwing,postProfile:s.postProfile,beamProfile:s.beamProfile,crossProfile:s.crossProfile,
       topRoofProfile:s.topRoofProfile,topWallProfile:s.topWallProfile,chairProfile:s.chairProfile,bottomProfile:s.bottomProfile,
       chairHeight:s.chairHeight,doorCount:s.doorCount,doorWidth:s.doorWidth,doorHeight:s.doorHeight,
       gutterSize:s.gutterSize,gutterEnabled:s.gutterEnabled,downspouts:s.downspouts,waste:s.waste,stocks:s.stocks,
@@ -134,5 +180,5 @@
       totalCost:round(material+laborCost+overhead),
       sellingPrice:round((material+laborCost+overhead)/(1-margin/100))};
   }
-  window.GSSV17Engine={PROFILE_OPTIONS,FINISHES,defaults,get,geometry,segments,optimize,takeoff,signature,orderStatus,price,clone,round};
+  window.GSSV17Engine={PROFILE_OPTIONS,FINISHES,defaults,get,geometry,doorLayout,frontRuns,segments,optimize,takeoff,signature,orderStatus,price,clone,round};
 })();
