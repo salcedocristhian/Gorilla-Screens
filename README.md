@@ -1,4 +1,16 @@
-# Gorilla Screen Studio — V16 Gorilla Field Pilot
+# Gorilla Screen Studio — V17 Beta + V16 Field Pilot
+
+**V17 is integrated in the project navigation as Studio.** It adds a separate conceptual 3D enclosure workspace, manual project-photo comparison, 11 × 17 preliminary drawings, profile takeoff, commercial-bar cutting plan, cost inputs, and human-reviewed supplier RFQ handoff. Existing V16 photo tracing, approvals, 3D and deliverables remain available.
+
+**Start:** create a new project from photos, record the address and field dimensions, open the new **Studio** tab, choose roof/profile/finish settings, preview 3D, then open **Deliverables** or **Takeoff & Order**. No customer data is uploaded to GitHub; field data remain local.
+
+**Not production engineering or fully automated AI:** no five-photo automatic house reconstruction, no automatic camera calibration, no permit-ready sealed drawings, and no direct ABC/Lansing purchase API. Engineering, manufacturer-specific components and actual vendor stock/prices require independent verification. The app will never transmit a purchase order without a person acting.
+
+See [V17 Implementation & QA](docs/V17-IMPLEMENTATION.md) and [V17 Actions](https://github.com/salcedocristhian/Gorilla-Screens/actions/workflows/v17-ci.yml).
+
+---
+
+## Preserved V16 Pilot
 
 This branch contains the Gorilla Screening Solutions LLC **photo-first field pilot**. New customer projects start with **zero openings, no demo house, no preset roof/gutter and no default price**. The original 22743 SW 56th Ave project is preserved as an **opt-in demo**.
 
