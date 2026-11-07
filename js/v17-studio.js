@@ -69,7 +69,7 @@ function reconstructionPanel(s,photos,selectedPhotos){
   '<h3>House context for the enclosure</h3><p>Gemini observations become a schematic house reference. The screen enclosure remains the editable design.</p></div>'+
   '<span class="v17-pill">Human review</span></div>'+
   '<details class="v17-site-more" id="v17-ai-details"><summary>Generate reference from Gemini findings <span>⌄</span></summary>'+
-  '<p class="lead smalltext">Select photos from this property only (maximum five). Our private Cloudflare pilot currently analyzes one photo. Use its JSON result here; multi-photo geometry calibration remains future work.</p>'+
+  '<p class="lead smalltext">Select only the property photos that Gemini actually analyzed. The current private Cloudflare pilot analyzes ONE photo. Multi-photo reconstruction will require an upgraded Worker.</p>'+
   '<div class="v17-ai-photos">'+(choices||'<p class="v17-note">Add photos in the Fotos tab first.</p>')+'</div>'+
   '<div class="v17-btnrow"><a class="btn sec" href="https://gorilla-ai-vision.salcedo-cristhian-2020.workers.dev/pilot" target="_blank" rel="noopener noreferrer">Open protected Gemini pilot</a></div>'+
   '<label class="v17-field"><span>Paste Gemini /pilot JSON (without private keys)</span>'+
@@ -324,7 +324,7 @@ function mount({project,photos,host,save,notify}){
  if(previousPreview){previousPreview.destroy();previousPreview=null;}
  const hadSite=!!project.studioV17?.site;
  let s=E.get(project);project.studioV17=s;
- const selectedPhotos=new Set((s.site?.reconstruction?.sourcePhotoIds||photos.filter(p=>p.cat!=='render').slice(0,5).map(p=>p.id)).filter(id=>photos.some(p=>p.id===id)));
+ const selectedPhotos=new Set((s.site?.reconstruction?.sourcePhotoIds||photos.filter(p=>p.cat!=='render').slice(0,1).map(p=>p.id)).filter(id=>photos.some(p=>p.id===id)));
  const source=photos.find(x=>x.cat==='porche')||photos.find(x=>x.cat==='frente')||photos.find(x=>x.cat==='street');
  const hadPhoto=!!s.site.photoId;
  if(source&&!hadPhoto){
