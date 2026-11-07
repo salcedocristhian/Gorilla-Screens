@@ -7,7 +7,8 @@
   function endpoint(value) {
     let u;
     try { u=new URL(value||DEFAULT_ENDPOINT); } catch (_) { throw Error('La dirección del Worker no es válida.'); }
-    if (u.protocol!=='https:' || u.username || u.password || u.search || u.hash || u.pathname!=='/api/analyze') {
+    if (u.protocol!=='https:' || u.username || u.password || u.search || u.hash ||
+        u.hostname!=='gorilla-studio-ai-bridge.salcedo-cristhian-2020.workers.dev' || u.pathname!=='/api/analyze') {
       throw Error('El Worker debe usar HTTPS y terminar exactamente en /api/analyze.');
     }
     return u.href;
