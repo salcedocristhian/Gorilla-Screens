@@ -1,0 +1,16 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gorilla AI Vision · Experimental</title>
+<style>body{font:16px system-ui;background:#111;color:#f7f7f7;max-width:650px;margin:25px auto;padding:20px}section{background:#222;border-radius:16px;padding:20px}input,button{font:inherit;max-width:100%;margin:8px 0;padding:12px;border-radius:9px}input[type=password]{width:95%}button{background:#a6e0b2;border:0;color:#111;font-weight:700}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#111;padding:14px;border-radius:12px}small{color:#aaa}</style>
+<section><h1>Gorilla · AI Vision Lab</h1><p>Prueba aislada de análisis visual. No cambia el 3D, materiales, planos ni pedidos de Gorilla.</p><label>Token del proxy local (no es una API key del proveedor)<input id="token" type="password" autocomplete="off"></label><label>Fotos autorizadas de un solo proyecto (1–5)<input id="photos" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><p><label><input id="consent" type="checkbox"> Autorizo enviar estas fotografías al proveedor de IA configurado en mi equipo.</label></p><button id="go">Analizar fotos</button><p id="status" role="status"></p><pre id="output">Esperando fotografías…</pre><small>Funciona solamente en el mismo computador que ejecuta el proxy local. Para uso móvil será necesario un backend autenticado. La interpretación no establece medidas verificadas.</small></section>
+<script>
+const $=id=>document.getElementById(id);
+$('go').onclick=async()=>{try{
+ const files=[...$('photos').files];if(!files.length||files.length>5)throw Error('Selecciona entre 1 y 5 fotografías.');
+ if(!$('consent').checked)throw Error('Confirma la autorización para enviar las fotos.');
+ if(!$('token').value)throw Error('Introduce el token local.');
+ $('go').disabled=true;$('status').textContent='Analizando…';
+ const images=await Promise.all(files.map(f=>new Promise((resolve,reject)=>{if(f.size>1500000)return reject(Error('Reduce cada foto a menos de 1.5 MB.'));const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(f)})));
+ const response=await fetch('http://127.0.0.1:8789/analyze',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+$('token').value},body:JSON.stringify({images})});
+ const data=await response.json();if(!response.ok)throw Error(data.error||'Error de análisis');
+ $('output').textContent=data.raw;$('status').textContent='Resultado preliminar. Revisión humana obligatoria.';
+ }catch(e){$('status').textContent=e.message}finally{$('go').disabled=false}};
+</script></html>
