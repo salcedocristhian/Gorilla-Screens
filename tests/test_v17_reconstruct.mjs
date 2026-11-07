@@ -20,7 +20,7 @@ const input={
  suggestedEnclosureDesign:['Confirm screen framing at fascia'],
  measurementsToVerify:['Measure slab','Confirm fascia'],
  limitations:['No measurement from photo'],
- geometry:{
+ geometry:{photoCount:2,
   houseRoofType:'flat',
   facadeOpenings:[
    {kind:'sliding-door',x:.20,y:.05,width:.28,height:.65,evidence:'Rear patio photo',confidence:'medium'},
