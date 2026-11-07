@@ -21,6 +21,7 @@
   const PHOTO_CATS = [
     ['aerea', 'Vista aérea', 'Imagen aérea autorizada o fotografía propia. Se muestra en el plano de ubicación.'],
     ['street', 'Vista desde la calle', 'Fotografía propia o referencia con derechos de uso.'],
+    ['site', 'Fotos del análisis AI Vision', 'Fotos capturadas en el proyecto para el mismo análisis.'],
     ['frente', 'Frente de la casa', 'Foto completa del frente, de esquina a esquina.'],
     ['west', 'West / elevación izquierda', 'Vista completa del lado oeste o izquierdo, tomada desde el exterior.'],
     ['east', 'East / elevación derecha', 'Vista completa del lado este o derecho, tomada desde el exterior.'],
@@ -32,7 +33,7 @@
   ];
   const VIEWS = [['frente', 'Frente'], ['izq', 'Lado izq.'], ['der', 'Lado der.'], ['arcos', 'Openings'], ['top', 'Techo'], ['porche', 'Porche'], ['aerea', 'Aérea']];
 
-  let S = { project: null, photos: [], viewer: null, builtFor: '', view: 'frente', after: true, land: true, palms: false, logoData: null, saveT: null, visionDrafts: new Map() };
+  let S = { project: null, photos: [], viewer: null, builtFor: '', view: 'frente', after: true, land: true, palms: false, logoData: null, saveT: null, visionDrafts: new Map(), visionSelections: new Map(), visionToken: '', visionEndpoint: '' };
 
   // ---------- utilities
   let toastT; function toast(t, ms) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), ms || 2600); }
@@ -297,6 +298,8 @@
   // The public GitHub Pages app NEVER uploads client photos or stores the Gemini API key.
   function visionCard(p) {
     const a=p.aiVision, valid=a&&window.GSSVision&&GSSVision.belongsTo(a,p.id,S.photos);
+    const initial=S.visionSelections.get(p.id);
+    const picked=initial|| (S.photos.length<=5 ? S.photos.map(ph=>ph.id) : []);
     const list=(title,items)=>items?.length?'<div class="pad"></div><b>'+esc(title)+'</b><ul>'+items.slice(0,12).map(v=>'<li>'+esc(v)+'</li>').join('')+'</ul>':'';
     const result=a?'<div class="card" style="background:var(--surface,#f5f5f7)"><div class="cap">AI ANALYSIS · PENDING HUMAN REVIEW</div>'+
       '<p class="lead">Modelo: '+esc(a.model)+' · '+(valid?'Evidencia vinculada al proyecto':'⚠ Faltan fotos de evidencia')+'</p>'+
@@ -306,18 +309,28 @@
       list('Revisar en campo',a.findings?.measurementsToVerify)+
       list('Limitaciones',a.findings?.limitations)+
       list('Alertas',a.warnings)+
-      '<p class="lead smalltext">Este análisis no cambia las medidas, los openings, el modelo 3D ni el takeoff.</p>'+
+      '<p class="lead smalltext">Este análisis no cambia medidas, openings, modelo 3D ni takeoff.</p>'+
       '<a class="btn sec block" href="#/p/'+esc(p.id)+'/studio" style="text-decoration:none">Abrir Studio →</a></div>':'';
-    return '<section class="card" aria-label="AI Vision project analysis"><div class="cap">GORILLA AI VISION · FOTOS → STUDIO</div>'+
-      '<h2>Análisis fotográfico con revisión humana</h2>'+
-      '<p class="lead">Analiza las fotos autorizadas en el piloto privado. Copia el JSON y vincúlalo aquí a las fotos del MISMO proyecto. No se envían fotos desde GitHub Pages.</p>'+
-      '<a class="btn sec block" href="https://gorilla-ai-vision.salcedo-cristhian-2020.workers.dev/pilot" target="_blank" rel="noopener noreferrer" style="text-decoration:none">↗ Abrir AI Vision Pilot</a>'+
-      (S.photos.length ? '<p class="lead smalltext">'+S.photos.length+' fotos en este proyecto. Marca las mismas que utilizaste en Gemini.</p>' : '<p class="warn">Paso 1: Todavía no hay fotos guardadas aquí. Primero agrégalas en la sección de fotografías, más abajo.</p><button class="btn sec block" type="button" data-a="vision-to-photos">↓ Ir a cargar fotografías</button>')+
-      '<div class="field"><label for="vision-json">Paso 2 · Pegar JSON completo de Gemini</label><textarea id="vision-json" rows="5" placeholder="Pega aquí el JSON copiado desde el piloto"></textarea></div>'+
-      '<p class="lead smalltext">Selecciona exactamente las fotografías usadas en ese análisis (máximo cinco). El conteo se valida contra el JSON.</p>'+
-      '<div style="max-height:210px;overflow:auto">'+S.photos.map(ph=>'<label style="display:flex;align-items:center;gap:10px;padding:8px 0"><input type="checkbox" data-ai-photo value="'+esc(ph.id)+'" '+(a?.photoIds?.includes(ph.id)?'checked':'')+'><span>'+esc(ph.cat)+' · '+new Date(ph.createdAt).toLocaleDateString('en-US')+'</span></label>').join('')+'</div>'+
-      '<label style="display:flex;align-items:flex-start;gap:9px;padding:9px 0"><input id="vision-authorized" type="checkbox"><span>Confirmo que las fotos corresponden a esta propiedad y tengo autorización para analizar sus imágenes.</span></label>'+ 
-      '<button class="btn block" data-a="vision-import">Guardar análisis en este proyecto</button>'+result+'</section>';
+    const status=S.photos.length?
+      'Selecciona entre 1 y 5 fotos de esta propiedad. Si acabas de capturarlas aquí, ya estarán seleccionadas.' :
+      'Primero captura las fotos aquí mismo; se guardarán en este proyecto, no tendrás que repetir la carga.';
+    return '<section class="card" aria-label="AI Vision project analysis"><div class="cap">GORILLA AI VISION · CAPTURA ÚNICA</div>'+
+      '<h2>Fotografiar → Analizar → Studio 3D</h2>'+
+      '<p class="lead">Toma o selecciona hasta cinco fotos una sola vez. Se guardan en este proyecto y el resultado de Gemini se guarda automáticamente. No necesitas abrir otra página ni copiar JSON.</p>'+
+      '<label class="btn sec block" style="display:block;text-align:center;cursor:pointer">📷 Capturar / seleccionar fotos (1–5)<input type="file" accept="image/*" multiple data-ai-quick-files style="position:absolute;opacity:0;width:1px;height:1px" aria-label="Capturar o seleccionar fotos para AI Vision"></label>'+
+      '<p class="lead smalltext">'+esc(status)+'</p>'+
+      '<div style="max-height:240px;overflow:auto">'+S.photos.map(ph=>'<label style="display:flex;align-items:center;gap:10px;padding:8px 0"><input type="checkbox" data-ai-photo value="'+esc(ph.id)+'" '+(picked.includes(ph.id)?'checked':'')+'><span>'+esc(ph.cat)+' · '+new Date(ph.createdAt).toLocaleDateString('en-US')+'</span></label>').join('')+'</div>'+
+      '<div class="field"><label for="vision-token">Clave privada de AI Vision (piloto)</label><input type="password" id="vision-token" autocomplete="off" placeholder="Clave configurada en Cloudflare"><p class="lead smalltext">Se mantiene solo en memoria mientras la aplicación está abierta. La clave de Gemini nunca llega al teléfono.</p></div>'+
+      '<label style="display:flex;align-items:flex-start;gap:9px;padding:9px 0"><input id="vision-authorized" type="checkbox"><span>Confirmo que tengo autorización para enviar estas fotografías a Gemini y que pertenecen al proyecto actual.</span></label>'+
+      '<button class="btn block" data-a="vision-analyze">Analizar fotos con IA → Guardar en este proyecto</button>'+
+      '<p id="vision-live-status" role="status" aria-live="polite" class="lead smalltext"></p>'+
+      '<details class="card" style="margin-top:14px"><summary>Configuración avanzada / importar JSON anterior</summary>'+
+      '<div class="field"><label for="vision-endpoint">URL del Worker AI Bridge</label><input id="vision-endpoint" type="url" autocomplete="off" spellcheck="false"></div>'+
+      '<p class="lead smalltext">El análisis automático requiere un Worker autenticado y autorizado para esta dirección web. No uses el piloto público sin autenticación.</p>'+
+      '<a class="btn sec block" href="https://gorilla-ai-vision.salcedo-cristhian-2020.workers.dev/pilot" target="_blank" rel="noopener noreferrer" style="text-decoration:none">Abrir piloto anterior (alternativa)</a>'+
+      '<div class="field"><label for="vision-json">Pegar JSON anterior</label><textarea id="vision-json" rows="5" placeholder="Solo para resultados anteriores del piloto"></textarea></div>'+
+      '<button class="btn sec block" data-a="vision-import">Guardar JSON anterior</button></details>'+
+      result+'</section>';
   }
 
   function tabFotos(el) {
@@ -331,18 +344,75 @@
           <label class="addph" aria-label="Agregar foto a ${esc(l)}">+<input type="file" accept="image/*" multiple data-cat="${k}"></label>
         </div>
       </section>`).join('');
-    if(p.kind==='field'){el.insertAdjacentHTML('afterbegin',`<section class="card field-start"><div class="cap">PASO 2 · FOTOGRAFÍAS</div><h2>Captura la propiedad real</h2><p class="lead">Toma el frente, cada opening, la fascia y el techo. Después toca ✎ Plano en una foto para trazar el dibujo y verificar dimensiones.</p><a class="btn sec block" href="#/p/${p.id}/editor" style="text-decoration:none">Abrir dibujo 2D</a><p class="lead smalltext">AI Vision se conecta por importación revisada del JSON del piloto; todavía no reconstruye automáticamente el 3D ni modifica medidas.</p></section>`);}
+    if(p.kind==='field'){el.insertAdjacentHTML('afterbegin',`<section class="card field-start"><div class="cap">PASO 2 · FOTOGRAFÍAS</div><h2>Captura la propiedad real</h2><p class="lead">Toma el frente, cada opening, la fascia y el techo. Después toca ✎ Plano en una foto para trazar el dibujo y verificar dimensiones.</p><a class="btn sec block" href="#/p/${p.id}/editor" style="text-decoration:none">Abrir dibujo 2D</a><p class="lead smalltext">Las fotos se guardan aquí una sola vez. AI Vision guarda hallazgos revisables; las dimensiones se verifican en campo.</p></section>`);}
     el.insertAdjacentHTML('afterbegin',visionCard(p));
+    const selection=()=>$('[data-ai-photo]:checked',el).map(x=>x.value);
+    $('[data-ai-photo]',el).forEach(i=>i.onchange=()=>S.visionSelections.set(p.id,selection()));
+    const tokenField=$('#vision-token',el);
+    tokenField.value=S.visionToken||'';
+    tokenField.oninput=()=>{S.visionToken=tokenField.value;};
+    const endpointField=$('#vision-endpoint',el);
+    endpointField.value=S.visionEndpoint||window.GSSVisionAPI?.DEFAULT_ENDPOINT||'';
+    endpointField.oninput=()=>{S.visionEndpoint=endpointField.value.trim();};
+    const quick=$('[data-ai-quick-files]',el);
+    quick.onchange=async()=>{
+      const input=[...quick.files];if(!input.length)return;
+      if(input.length>5){toast('Selecciona máximo cinco fotos en la misma captura.',6000);return;}
+      quick.disabled=true;
+      const newIds=[];
+      try {
+        for(const f of input){
+          if(S.project?.id!==p.id)throw Error('El proyecto activo cambió. Vuelve a Fotos.');
+          const b=await resizeImage(f,1600);
+          if(!b)throw Error('Una foto no pudo procesarse.');
+          const id=Mo.uid();
+          await St.savePhoto({id,projectId:p.id,cat:'site',blob:b,createdAt:Date.now()});
+          newIds.push(id);
+        }
+        if(S.project?.id!==p.id)return;
+        await loadPhotos(p.id);
+        S.visionSelections.set(p.id,newIds);
+        tabFotos(el);
+        toast(newIds.length+' foto(s) guardadas y seleccionadas para AI Vision.',5000);
+      }catch(err){toast(err.message||'No se pudieron guardar las imágenes.',6000);
+        if(S.project?.id===p.id){await loadPhotos(p.id);tabFotos(el);}
+      } finally{quick.disabled=false;}
+    };
+    const analyzeButton=$('[data-a="vision-analyze"]',el);
+    analyzeButton.onclick=async()=>{
+      const ids=selection(),status=$('#vision-live-status',el);
+      if(!ids.length||ids.length>5){toast('Selecciona de 1 a 5 fotos de este proyecto.',6000);return;}
+      if(!$('#vision-authorized',el)?.checked){toast('Confirma la autorización de las fotografías.',6000);return;}
+      const photos=ids.map(id=>S.photos.find(x=>x.id===id));
+      if(photos.some(x=>!x||x.projectId!==p.id)){toast('Fotos de evidencia incorrectas para este proyecto.',6000);return;}
+      if(!window.GSSVisionAPI){toast('Módulo de AI Vision no cargado.',6000);return;}
+      analyzeButton.disabled=true;status.textContent='Gemini está analizando las '+ids.length+' fotos de este proyecto…';
+      const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),90000);
+      try{
+        const analysis=await GSSVisionAPI.analyze({
+          projectId:p.id,photos,token:S.visionToken,
+          url:S.visionEndpoint||GSSVisionAPI.DEFAULT_ENDPOINT,signal:ctrl.signal
+        });
+        if(S.project?.id!==p.id)throw Error('El proyecto activo cambió: no se guardó el resultado.');
+        const current=await St.listPhotos(p.id);
+        if(!ids.every(id=>current.some(x=>x.id===id)))throw Error('Cambió la evidencia fotográfica durante el análisis.');
+        p.aiVision=analysis;
+        await St.saveProject(p);
+        S.visionSelections.set(p.id,ids);
+        status.textContent='Análisis guardado para revisión humana; el modelo 3D no se modificó.';
+        toast('AI Vision guardado en este proyecto. Abre Studio.',5500);
+        tabFotos(el);
+      }catch(err){
+        status.textContent=err.message||'No se pudo completar el análisis.';
+        toast(status.textContent,6500);
+      }finally{clearTimeout(timer);analyzeButton.disabled=false;}
+    };
+
     // Keep a pasted report only in memory while photos are added or the tab rerenders.
     // Drafts are keyed by project to prevent one house appearing in another.
     const visionField=$('#vision-json',el);
     visionField.value=S.visionDrafts.get(p.id)||'';
     visionField.oninput=()=>S.visionDrafts.set(p.id,visionField.value);
-    const jumpPhotos=$('[data-a="vision-to-photos"]',el);
-    if(jumpPhotos)jumpPhotos.onclick=()=>{
-      const target=$('input[data-cat="frente"]',el)?.closest('section');
-      if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
-    };
     const visionImport=$('[data-a="vision-import"]',el);
     if(visionImport)visionImport.onclick=async()=>{
       const selected=$$('[data-ai-photo]:checked',el).map(x=>x.value);
