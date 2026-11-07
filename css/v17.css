@@ -105,3 +105,18 @@
 .v17-site-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--sub)}
 .v17-attach-warning{border:1px solid #c7883c;color:var(--text)}
 @media(max-width:420px){.v17-site-header{align-items:flex-start}.v17-site-switch{font-size:11px}.v17-site-primary{gap:9px}.v17-site-thumb{width:65px;height:62px}}
+
+/* Gorilla V17.1: AI existing-site reference review; enclosure stays primary. */
+.v17-ai-panel{margin:14px 0;border:1px solid var(--line);border-radius:16px;padding:15px;background:var(--card)}
+.v17-ai-panel h3{font-size:16px;font-weight:750;margin:7px 0 4px;letter-spacing:-.015em}
+.v17-ai-panel .v17-site-header{align-items:center}
+.v17-ai-photos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+.v17-ai-photo{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--field);font-size:11px;color:var(--text)}
+.v17-ai-photo input{width:17px;height:17px;flex-shrink:0;accent-color:var(--accent)}
+.v17-ai-panel textarea{display:block;resize:vertical;min-height:105px;width:100%;max-width:100%;margin-top:6px;
+  color:var(--text);background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.5}
+.v17-ai-results{background:var(--field);padding:12px;margin:12px 0 0;border-radius:12px;font-size:12px}
+.v17-ai-results p{margin:7px 0;color:var(--sub);line-height:1.5}
+.v17-ai-results .v17-ai-warning{color:var(--text)}
+@media(max-width:520px){.v17-ai-photos{grid-template-columns:1fr}.v17-ai-panel{padding:12px}.v17-ai-panel .v17-site-header{align-items:flex-start}}
