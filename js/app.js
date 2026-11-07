@@ -158,6 +158,8 @@
       if(p.studioV17?.site?.photoId)p.studioV17.site.photoId=idMap[p.studioV17.site.photoId]||'';
       if(p.studioV17?.match?.before)p.studioV17.match.before=idMap[p.studioV17.match.before]||'';
       if(p.studioV17?.match?.after)p.studioV17.match.after=idMap[p.studioV17.match.after]||'';
+      // AI evidence belongs to the newly imported project; never retain old photo ownership.
+      if(p.aiVision){p.aiVision.projectId=p.id;p.aiVision.photoIds=Array.isArray(p.aiVision.photoIds)?p.aiVision.photoIds.map(id=>idMap[id]).filter(Boolean):[];p.aiVision.reviewed=false;}
 
       await St.saveProject(p); for(const ph of parsedPhotos)await St.savePhoto(ph);
       location.hash = '#/p/' + p.id + '/datos';
@@ -278,6 +280,31 @@
     $('[data-a="del"]').onclick = async () => { if (!confirm('¿Borrar este proyecto y sus fotos?')) return; await St.deleteProject(p.id); S.project = null; location.hash = '#/'; };
   }
 
+  // AI Vision is intentionally a human-reviewed import from the private same-origin /pilot.
+  // The public GitHub Pages app NEVER uploads client photos or stores the Gemini API key.
+  function visionCard(p) {
+    const a=p.aiVision, valid=a&&window.GSSVision&&GSSVision.belongsTo(a,p.id,S.photos);
+    const list=(title,items)=>items?.length?'<div class="pad"></div><b>'+esc(title)+'</b><ul>'+items.slice(0,12).map(v=>'<li>'+esc(v)+'</li>').join('')+'</ul>':'';
+    const result=a?'<div class="card" style="background:var(--surface,#f5f5f7)"><div class="cap">AI ANALYSIS · PENDING HUMAN REVIEW</div>'+
+      '<p class="lead">Modelo: '+esc(a.model)+' · '+(valid?'Evidencia vinculada al proyecto':'⚠ Faltan fotos de evidencia')+'</p>'+
+      (valid?'':'<p class="warn">Este resultado tiene referencias a fotografías eliminadas o externas. Repite la vinculación antes de usarlo.</p>')+
+      list('Elementos de la casa',a.findings?.visibleHouseFeatures)+
+      list('Fascia / attachment',a.findings?.fasciaAndAttachmentObservations)+
+      list('Revisar en campo',a.findings?.measurementsToVerify)+
+      list('Limitaciones',a.findings?.limitations)+
+      list('Alertas',a.warnings)+
+      '<p class="lead smalltext">Este análisis no cambia las medidas, los openings, el modelo 3D ni el takeoff.</p>'+
+      '<a class="btn sec block" href="#/p/'+esc(p.id)+'/studio" style="text-decoration:none">Abrir Studio →</a></div>':'';
+    return '<section class="card" aria-label="AI Vision project analysis"><div class="cap">GORILLA AI VISION · FOTOS → STUDIO</div>'+
+      '<h2>Análisis fotográfico con revisión humana</h2>'+
+      '<p class="lead">Analiza las fotos autorizadas en el piloto privado. Copia el JSON y vincúlalo aquí a las fotos del MISMO proyecto. No se envían fotos desde GitHub Pages.</p>'+
+      '<a class="btn sec block" href="https://gorilla-ai-vision.salcedo-cristhian-2020.workers.dev/pilot" target="_blank" rel="noopener noreferrer" style="text-decoration:none">↗ Abrir AI Vision Pilot</a>'+
+      '<div class="field"><label for="vision-json">Pegar JSON completo de Gemini</label><textarea id="vision-json" rows="5" placeholder="{ \"status\": \"draft-needs-human-review\", \"findings\": { ... } }"></textarea></div>'+
+      '<p class="lead smalltext">Selecciona exactamente las fotografías usadas en ese análisis (máximo cinco). El conteo se valida contra el JSON.</p>'+
+      '<div style="max-height:210px;overflow:auto">'+S.photos.map(ph=>'<label style="display:flex;align-items:center;gap:10px;padding:8px 0"><input type="checkbox" data-ai-photo value="'+esc(ph.id)+'" '+(a?.photoIds?.includes(ph.id)?'checked':'')+'><span>'+esc(ph.cat)+' · '+new Date(ph.createdAt).toLocaleDateString('en-US')+'</span></label>').join('')+'</div>'+
+      '<button class="btn block" data-a="vision-import">Guardar análisis en este proyecto</button>'+result+'</section>';
+  }
+
   function tabFotos(el) {
     const p=S.project, by = c => S.photos.filter(x => x.cat === c);
     el.innerHTML = PHOTO_CATS.map(([k, l, h]) => `
@@ -290,7 +317,23 @@
         </div>
       </section>`).join('');
     if(p.kind==='field'){el.insertAdjacentHTML('afterbegin',`<section class="card field-start"><div class="cap">PASO 2 · FOTOGRAFÍAS</div><h2>Captura la propiedad real</h2><p class="lead">Toma el frente, cada opening, la fascia y el techo. Después toca ✎ Plano en una foto para trazar el dibujo y verificar dimensiones.</p><a class="btn sec block" href="#/p/${p.id}/editor" style="text-decoration:none">Abrir dibujo 2D</a><p class="lead smalltext">El reconocimiento automático con IA todavía no está conectado. Ninguna dimensión se inventará a partir de la imagen.</p></section>`);}
-    $$('input[data-cat]', el).forEach(i => i.onchange = async () => {
+    el.insertAdjacentHTML('afterbegin',visionCard(p));
+    const visionImport=$('[data-a="vision-import"]',el);
+    if(visionImport)visionImport.onclick=async()=>{
+      const selected=$('[data-ai-photo]:checked',el).map(x=>x.value);
+      const raw=$('#vision-json',el)?.value||'';
+      try{
+        if(!window.GSSVision)throw Error('Módulo AI Vision no disponible.');
+        if(!selected.every(id=>S.photos.some(x=>x.id===id&&x.projectId===p.id)))throw Error('Las fotos no pertenecen a este proyecto.');
+        const analysis=GSSVision.normalize(raw,p.id,selected);
+        if(S.project?.id!==p.id)throw Error('Cambió el proyecto activo; vuelve a abrir Fotos.');
+        p.aiVision=analysis;
+        await St.saveProject(p);
+        toast('Análisis guardado para revisión; las medidas no cambian.',5000);
+        tabFotos(el);
+      }catch(err){toast(err.message||'No se pudo guardar el análisis.',6000);}
+    };
+    $('input[data-cat]', el).forEach(i => i.onchange = async () => {
       const files = [...i.files]; if (!files.length) return; toast('Guardando ' + files.length + ' foto(s)…');
       for (const f of files) { try { const b = await resizeImage(f, 1600); await St.savePhoto({ id: Mo.uid(), projectId: S.project.id, cat: i.dataset.cat, blob: b, createdAt: Date.now() }); } catch (e) { toast('Una foto no se pudo leer'); } }
       await loadPhotos(); tabFotos(el);
@@ -492,7 +535,7 @@
     } catch (e) { console.error(e); toast('No se pudo generar el plano'); }
     busy(el, false);
   }
-  function shareURL(withPrice) { const p = JSON.parse(JSON.stringify(S.project)); p._company = company(); delete p.geo; if (!withPrice) { p.quote.rate = 0; p.quote.extras = []; p.quote.hidePrice = true; } return location.href.split('#')[0] + '#/cliente/' + Mo.encodeShare(p); }
+  function shareURL(withPrice) { const p = JSON.parse(JSON.stringify(S.project)); p._company = company(); delete p.geo; delete p.aiVision; if (!withPrice) { p.quote.rate = 0; p.quote.extras = []; p.quote.hidePrice = true; } return location.href.split('#')[0] + '#/cliente/' + Mo.encodeShare(p); }
   function tabEntregar(el) {
     const p = S.project;
     el.innerHTML = `
