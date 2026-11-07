@@ -54,6 +54,8 @@ function apply(s,result,photoIds,validPhotoIds){
  const permitted=new Set(validPhotoIds);
  const sources=[...new Set(photoIds)].filter(id=>permitted.has(id)).slice(0,5);
  if(!sources.length)throw Error('Select at least one photo owned by this project.');
+ const expected=result.sourceCount||1;
+ if(sources.length!==expected)throw Error('Gemini analyzed '+expected+' photo(s). Select exactly the source photos that were actually analyzed.');
  const draft=JSON.parse(JSON.stringify(result));
  // Intentionally never updates geometry W/D/H, house dimensions, fascia height,
  // enclosure roof, cut list, price or field measurement verification.
