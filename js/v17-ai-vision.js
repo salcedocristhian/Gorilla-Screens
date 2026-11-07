@@ -7,7 +7,8 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const accepted=['image/jpeg','image/png','image/webp'];
 const maxFiles=5,maxImageBytes=1400000;
 function endpoint(){
- const x=typeof window.GORILLA_VISION_ENDPOINT==='string'?window.GORILLA_VISION_ENDPOINT.trim():'';
+ const configured=typeof window.GORILLA_VISION_ENDPOINT==='string'?window.GORILLA_VISION_ENDPOINT.trim():'';
+ const x=configured||(typeof localStorage!=='undefined'?localStorage.getItem('gss-vision-endpoint')||'':'');
  try{const u=new URL(x);return u.protocol==='https:'&&u.pathname.endsWith('/analyze')?u.toString():'';}
  catch{return '';}
 }
@@ -64,6 +65,7 @@ function render({project,photos,host,save,notify}){
  host.innerHTML='<section class="card v17-vision-card"><div class="v17-cardhead"><div><div class="cap">EXPERIMENTAL · AI VISION</div><h2>Analyze Existing Site</h2></div><span class="v17-pill">Not for production</span></div>'+
  '<p class="lead">Analiza fotos del proyecto como referencia para diseñar el <strong>screen enclosure</strong>. Nunca aplica cambios automáticos al 3D ni al takeoff.</p>'+
  '<div class="v17-note">'+(endpointURL?'Gateway HTTPS configurado. Ninguna foto se transmite sin tu consentimiento.':'Gateway de IA no configurado. Puedes preparar las fotos; para hacer llamadas reales hace falta desplegar y proteger el servicio.')+'</div>'+
+ '<details class="v17-site-more"><summary>Configurar gateway seguro (solo URL, nunca API keys)</summary><label class="v17-field"><span>HTTPS vision endpoint</span><input data-v17-gateway type="url" autocomplete="off" spellcheck="false" placeholder="https://tu-gateway.example/analyze" value="'+esc(endpointURL)+'"></label><button type="button" class="btn sec" data-v17-save-gateway>Guardar URL</button><p class="lead smalltext">Esta URL recibe imágenes cuando tú autorizas el análisis. Utiliza exclusivamente un gateway privado y verificado que controles.</p></details>'+
  '<div class="v17-vision-photos">'+photoChoices.map(p=>'<label class="v17-vision-photo"><img src="'+esc(p.url)+'" alt="Foto del proyecto: '+esc(p.cat)+'"><input type="checkbox" data-v17-photo="'+esc(p.id)+'" '+(selected.has(p.id)?'checked':'')+'><span>'+esc(p.cat)+'</span></label>').join('')+'</div>'+
  (!photoChoices.length?'<div class="v17-placeholder">Este proyecto aún no tiene fotografías compatibles. Agrégalas en la pestaña Fotos.</div>':'')+
  '<label class="v17-vision-consent"><input id="v17-vision-consent" type="checkbox"> Confirmo que tengo autorización para enviar estas fotos al proveedor de IA seleccionado.</label>'+
@@ -73,6 +75,15 @@ function render({project,photos,host,save,notify}){
  listed(old.observations,'Observations')+listed(old.fascia,'Potential fascia locations')+listed(old.openings,'Openings')+
  listed(old.obstacles,'Obstacles')+listed(old.measurements,'Field measurements required')+listed(old.limitations,'Limitations')+
  '<p class="v17-note">Resultado solamente de lectura. La confirmación dimensional y el diseño siguen en Studio → Design.</p></div>':'')+'</section>';
+ host.querySelector('[data-v17-save-gateway]').onclick=()=>{
+   const value=host.querySelector('[data-v17-gateway]').value.trim();
+   if(value){
+     try{const url=new URL(value);if(url.protocol!=='https:'||!url.pathname.endsWith('/analyze'))throw Error();}
+     catch{notify('URL no válida: usa HTTPS y termina en /analyze.');return;}
+   }
+   localStorage.setItem('gss-vision-endpoint',value);
+   render({project,photos,host,save,notify});
+ };
  host.querySelectorAll('[data-v17-photo]').forEach(c=>c.onchange=()=>{
    const id=c.dataset.v17Photo;if(c.checked){if(selected.size>=maxFiles){c.checked=false;notify('Máximo 5 fotografías.');return;}selected.add(id);}else selected.delete(id);
    state.selected=[...selected];save();
@@ -93,7 +104,7 @@ function render({project,photos,host,save,notify}){
      const controller=new AbortController();
      const timer=setTimeout(()=>controller.abort(),65000);
      let response;
-     try{response=await fetch(endpointURL,{method:'POST',credentials:'include',headers:{'content-type':'application/json'},body:JSON.stringify({images,projectRef:project.id}),signal:controller.signal});}
+     try{response=await fetch(endpointURL,{method:'POST',credentials:'include',headers:{'content-type':'application/json'},body:JSON.stringify({images}),signal:controller.signal});}
      finally{clearTimeout(timer);}
      const answer=await response.json();
      if(!response.ok)throw Error(answer.error||'El gateway no pudo analizar las fotografías.');
