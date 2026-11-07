@@ -83,7 +83,7 @@ try{
  assert.ok(await page.locator('#v17-preview').getAttribute('data-photo-reference'),'Project photo is used, not a sample from another project');
  const photoId=await page.locator('[data-v17-site="photoId"]').inputValue();
  assert.ok(photoId,'Photo reference should be selected from project photo list');
- await page.locator('.v17-site-more summary').click();
+ await page.locator('.v17-site-reference .v17-site-more summary').click();
  const oldHeight=Number(await page.locator('[data-v17-key="height"]').inputValue());
  await page.locator('[data-v17-key="site-fasciaHeight"]').fill(String(oldHeight+1));
  await page.locator('[data-v17-key="site-fasciaHeight"]').dispatchEvent('change');
