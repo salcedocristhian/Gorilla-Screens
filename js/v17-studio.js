@@ -72,9 +72,9 @@ function reconstructionPanel(s,photos,selectedPhotos){
  const summary=rec?'<div class="v17-ai-results">'+
    '<div class="v17-ai-geometry-metadata">'+traits+'</div>'+
    '<p class="v17-ai-warning">These are inferred visual categories, NOT measured house geometry.</p>'+
-   '<p><strong>'+rec.attachments.length+' candidate wall zones · '+rec.upperZones.length+
+   '<p><strong>'+(rec.attachments||[]).length+' candidate wall zones · '+(rec.upperZones||[]).length+
    ' upper zones</strong> — engineering suitability unverified</p>'+
-   (rec.missingViews.length?'<p><strong>More photo views needed:</strong> '+esc(rec.missingViews.join(' · '))+'</p>':'')+
+   ((rec.missingViews||[]).length?'<p><strong>More photo views needed:</strong> '+esc(rec.missingViews.join(' · '))+'</p>':'')+
    '<strong>Resultado '+esc(state)+'</strong><p>'+esc(rec.features.slice(0,4).join(' · ')||'No visible features described')+'</p>'+
    '<p>'+rec.openings.length+' normalized facade openings · '+rec.toVerify.length+' measurements to verify · '+rec.sourcePhotoIds.length+' own-project photos</p>'+
    '<p class="v17-ai-warning">Reference-only. No dimension, wind approval, survey, or takeoff inferred from AI.</p>'+
