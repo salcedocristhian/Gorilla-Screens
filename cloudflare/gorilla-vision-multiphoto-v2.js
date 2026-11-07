@@ -42,22 +42,38 @@ const PAGE=[
 '</script></html>'
 ].join('');
 const PROMPT=[
- 'You are a Florida screen enclosure existing-site visual analysis assistant.',
- 'The HOUSE is context; the SCREEN ENCLOSURE is the proposed design.',
- 'Analyze the attached photos as the same property. Do not confuse proposal renders with existing conditions.',
- 'Return exactly one JSON object with fields: findings and siteGeometry.',
- 'findings keys: visibleHouseFeatures, fasciaAndAttachmentObservations, patioAndObstacles,',
- 'suggestedEnclosureDesign, measurementsToVerify, limitations. All are short string arrays.',
- 'siteGeometry keys: houseRoofType (flat/gable/hip/unknown), facadeOpenings (array).',
- 'Each opening has: kind (window/door/sliding-door/arch/column/opening),',
- 'x,y,width,height (all normalized 0..1 relative to a conceptual FRONTAL elevation of existing house;',
- 'x left-to-right, y measured upward from bottom), confidence (low/medium/high), evidence (string).',
- 'Include coordinates ONLY if multiple views clearly support a conceptual frontal alignment;',
- 'if perspective or position is ambiguous, return facadeOpenings: []. Never fabricate openings.',
- 'Never infer measured ft/in, verified fascia attachment, exact slab dimension, wind loading,',
- 'property survey, code compliance, engineering approval or quantity from photos.',
- 'Identify field measurements needed before screen enclosure fabrication.',
- 'Maximum 12 observations in each array and 12 openings.'
+ 'You are GORILLA AI SITE RECONSTRUCTION, a visual architectural-context analyst specializing in screen enclosures.',
+ 'PRIMARY GOAL: Generate a structured SCHEMATIC reference of the EXISTING house and patio from 1-5 photos.',
+ 'The HOUSE is context. The actual product is the proposed aluminum SCREEN ENCLOSURE.',
+ 'Treat all images as the SAME site and cross-check repeated visual features across angles.',
+ 'Distinguish what is VISIBLE in photos from inferred, hidden or proposed design.',
+ 'If a feature is absent from view, use null/unknown. False only if the absence is supported by evidence.',
+ 'Return one JSON object with findings and siteGeometry. No commentary, no markdown.',
+ 'findings has string arrays: visibleHouseFeatures, fasciaAndAttachmentObservations,',
+ 'patioAndObstacles, suggestedEnclosureDesign, measurementsToVerify, limitations.',
+ 'siteGeometry has stories (integer 1, 2, 3 or null), houseRoofType (flat|gable|hip|unknown),',
+ 'coveredPatio (true|false|null), poolPresent (true|false|null), spaPresent (true|false|null),',
+ 'balconyPresent (true|false|null), poolShape (rectangular|freeform|circular|other|unknown),',
+ 'deckSurface (pavers|concrete|tile|wood|other|unknown), contextConfidence (low|medium|high),',
+ 'candidateAttachmentWalls (array), upperAttachmentZones (array), facadeOpenings (array),',
+ 'recommendedCaptureMissingViews (array of short descriptions).',
+ 'Each candidateAttachmentWalls entry: id, level (integer 1-3 or null),',
+ 'visibleMaterial, observation, confidence (low|medium|high), evidencePhotoIndices (1-based list),',
+ 'structuralSuitability set to unverified.',
+ 'Each upperAttachmentZones entry: id, level (integer 1-3 or null),',
+ 'description, confidence, evidencePhotoIndices (1-based list), structuralSuitability unverified.',
+ 'These zones are OBSERVED CANDIDATES, not proof that any attachment can support a structure.',
+ 'facadeOpenings each: kind (window|door|sliding-door|arch|column|opening),',
+ 'x,y,width,height normalized 0..1 in a trustworthy approx rear facade elevation,',
+ 'x left-to-right and y bottom-to-top, confidence and evidence text.',
+ 'Only produce facadeOpenings if photographic perspective provides trustworthy registration;',
+ 'otherwise return empty facadeOpenings. NO invented coordinates or hidden openings.',
+ 'Never invent measured dimensions in ft or inches, property boundaries, roof pitch, fascia elevations,',
+ 'structural loads, slab thickness, attachments, setbacks, engineering or permit approvals.',
+ 'Never confuse an existing roof or balcony with a proposed screen enclosure roof.',
+ 'Mention critical missing views and actual field measurements required.',
+ 'Limit all arrays to <=12 items; return null rather than guessing.',
+ 'Respond exclusively with a single valid JSON object.'
 ].join('\n');
 async function readBody(request){
  let body='';const decoder=new TextDecoder(),reader=request.body?.getReader();
@@ -73,6 +89,11 @@ function normalize(data,count){
  const f=data?.findings,g=data?.siteGeometry;
  if(!f||!g||typeof f!=='object'||typeof g!=='object')throw Error('Missing AI schema');
  const list=k=>Array.isArray(f[k])?f[k].slice(0,12).filter(x=>typeof x==='string').map(x=>x.slice(0,250)):[];
+ const outlist=Array.isArray(g.recommendedCaptureMissingViews)?g.recommendedCaptureMissingViews.slice(0,10)
+   .filter(x=>typeof x==='string').map(x=>x.slice(0,180)):[];
+ const bool=v=>typeof v==='boolean'?v:null;
+ const confidence=v=>['low','medium','high'].includes(v)?v:'low';
+ const story=v=>Number.isInteger(v)&&v>=1&&v<=3?v:null;
  const kinds=['window','door','sliding-door','arch','column','opening'];
  const openings=Array.isArray(g.facadeOpenings)?g.facadeOpenings.slice(0,12).filter(o=>{
   if(!kinds.includes(o?.kind))return false;
@@ -80,8 +101,25 @@ function normalize(data,count){
   return n.every(x=>typeof x==='number'&&Number.isFinite(x))&&o.x>=0&&o.y>=0&&
    o.width>0&&o.height>0&&o.x+o.width<=1&&o.y+o.height<=1;
  }).map(o=>({kind:o.kind,x:o.x,y:o.y,width:o.width,height:o.height,
-  confidence:['low','medium','high'].includes(o.confidence)?o.confidence:'low',
-  evidence:String(o.evidence||'').slice(0,220)})):[];
+  confidence:confidence(o.confidence),evidence:String(o.evidence||'').slice(0,220)})):[];
+ const attachments=Array.isArray(g.candidateAttachmentWalls)?g.candidateAttachmentWalls.slice(0,8).map((a,i)=>({
+  id:String(a?.id||'wall-'+(i+1)).slice(0,60),level:story(a?.level),
+  visibleMaterial:String(a?.visibleMaterial||'unknown').slice(0,80),
+  observation:String(a?.observation||'').slice(0,250),
+  confidence:confidence(a?.confidence),
+  evidencePhotoIndices:Array.isArray(a?.evidencePhotoIndices)?[...new Set(a.evidencePhotoIndices)]
+    .filter(v=>Number.isInteger(v)&&v>=1&&v<=count).slice(0,5):[],
+  structuralSuitability:'unverified'
+ })).filter(a=>a.observation):[];
+ const upperZones=Array.isArray(g.upperAttachmentZones)?g.upperAttachmentZones.slice(0,8).map((a,i)=>({
+  id:String(a?.id||'upper-'+(i+1)).slice(0,60),level:story(a?.level),
+  description:String(a?.description||'').slice(0,250),
+  confidence:confidence(a?.confidence),
+  evidencePhotoIndices:Array.isArray(a?.evidencePhotoIndices)?[...new Set(a.evidencePhotoIndices)]
+    .filter(v=>Number.isInteger(v)&&v>=1&&v<=count).slice(0,5):[],
+  structuralSuitability:'unverified'
+ })).filter(a=>a.description):[];
+ const choice=(v,allowed,def='unknown')=>allowed.includes(v)?v:def;
  return {status:'draft-needs-human-review',model:MODEL,findings:{
   visibleHouseFeatures:list('visibleHouseFeatures'),
   fasciaAndAttachmentObservations:list('fasciaAndAttachmentObservations'),
@@ -89,8 +127,17 @@ function normalize(data,count){
   suggestedEnclosureDesign:list('suggestedEnclosureDesign'),
   measurementsToVerify:list('measurementsToVerify'),
   limitations:list('limitations'),
-  siteGeometry:{houseRoofType:['flat','gable','hip'].includes(g.houseRoofType)?g.houseRoofType:'unknown',
-   photoCount:count,facadeOpenings:openings}
+  siteGeometry:{
+   photoCount:count,stories:story(g.stories),
+   houseRoofType:choice(g.houseRoofType,['flat','gable','hip','unknown']),
+   coveredPatio:bool(g.coveredPatio),poolPresent:bool(g.poolPresent),
+   spaPresent:bool(g.spaPresent),balconyPresent:bool(g.balconyPresent),
+   poolShape:choice(g.poolShape,['rectangular','freeform','circular','other','unknown']),
+   deckSurface:choice(g.deckSurface,['pavers','concrete','tile','wood','other','unknown']),
+   candidateAttachmentWalls:attachments,upperAttachmentZones:upperZones,
+   facadeOpenings:openings,recommendedCaptureMissingViews:outlist,
+   contextConfidence:confidence(g.contextConfidence)
+  }
  },note:'Visual reference only: no measured dimensions, engineering, survey or fabrication approval.'};
 }
 export default {
