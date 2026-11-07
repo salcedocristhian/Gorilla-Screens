@@ -18,6 +18,20 @@ function select(k,label,val,options){
 function action(name,text,kind='sec'){return '<button class="btn '+kind+'" data-v17-action="'+name+'">'+text+'</button>';}
 function info(text){return '<div class="v17-note">'+text+'</div>';}
 
+function visionReviewPanel(p,photos){
+ const a=p.aiVision;
+ if(!a)return '<div class="v17-note"><strong>AI Vision:</strong> Sin análisis importado. <a href="#/p/'+esc(p.id)+'/fotos">Abrir Fotos y analizar →</a></div>';
+ const valid=window.GSSVision?.belongsTo(a,p.id,photos);
+ const g=a.findings?.siteGeometry||{};
+ return '<div class="v17-note"><strong>AI Vision · Pending human review</strong>'+
+   '<p>Fotos vinculadas: '+(a.photoIds?.length||0)+' · '+esc(a.model||'Gemini')+
+   ' · '+(valid?'Evidencia disponible':'⚠ Evidencia no disponible')+'</p>'+
+   '<p>Techo observado: '+esc(g.houseRoofType||'sin confirmar')+
+   ' · Piscina: '+(g.poolStatus==='observed-in-images'?'observada':'no confirmada')+'</p>'+
+   '<p>Attachment: '+esc(a.findings?.fasciaAndAttachmentObservations?.[0]||'por verificar')+'</p>'+
+   '<p><strong>No aplica geometría, alturas ni anclajes automáticamente.</strong> '+
+   '<a href="#/p/'+esc(p.id)+'/fotos">Revisar hallazgos y evidencia en Fotos →</a></p></div>';
+}
 function siteReference(s,photos,p){
  const site=E.siteLayout(s),raw=s.site||{},photo=photos.find(x=>x.id===site.photoId);
  const available=photos.filter(x=>['porche','frente','street','detalles','aerea','openings','render'].includes(x.cat));
@@ -29,6 +43,7 @@ function siteReference(s,photos,p){
    '<div class="v17-site-header"><div><span class="cap">EXISTING SITE · REFERENCE ONLY</span><p>Diseña el enclosure sobre la casa, sin modelar la vivienda pieza por pieza.</p></div>'+
    '<label class="v17-site-switch"><input type="checkbox" data-v17-site="enabled" '+(site.enabled?'checked':'')+'><span>Show house</span></label></div>'+
    (!available.length?'<p class="v17-note">Todavía no hay fotos del proyecto. <a href="#/p/'+esc(p.id)+'/fotos">Agrega una foto del patio o de la fachada en Fotos</a>. La geometría no se inventa.</p>':'')+
+   visionReviewPanel(p,photos)+
    '<div class="v17-site-primary">'+
    (photo?'<img class="v17-site-thumb" src="'+esc(photo.url)+'" alt="Fotografía real seleccionada del proyecto">':'<div class="v17-site-thumb v17-site-empty">No site photo</div>')+
    '<label class="v17-field v17-site-photo-field"><span>Site photo · from this project</span>'+
