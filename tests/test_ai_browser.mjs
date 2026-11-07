@@ -57,7 +57,7 @@ async function importResult(name,count,pool){
 try{
   const idA=await start();
   // Regression: an operator may paste Gemini JSON before uploading any project photos.
-  await page.getByText('Todavía no hay fotos guardadas aquí').waitFor();
+  await page.getByText('Primero captura las fotos aquí mismo', {exact:false}).waitFor();
   await page.locator('#vision-json').fill('DRAFT HOUSE A');
   for(const cat of ['frente','west','east']){
     await addPhoto(cat);
