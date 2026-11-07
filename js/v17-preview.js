@@ -78,8 +78,10 @@ function mount(host,s,sitePhoto){
    const x0=site.x0,x1=site.x1,zFront=-.28,zRear=-site.depth-.28,eaves=site.fascia;
    // A second/third story comes from an AI visual observation; its height is schematic.
    const roofElevation=context?.houseHeight||eaves;
-   const conceptualRoof=s.site?.verified?site.roofType:context?.houseRoofType;
-   const displayRoof=['flat','gable','hip'].includes(conceptualRoof)?conceptualRoof:site.roofType;
+   // Unknown AI roof stays an undifferentiated mass. Never draw default gable/hip as observed.
+   const visualEvidence=s.site?.reconstruction;
+   const displayRoof=site.verified?site.roofType:
+     visualEvidence?(context?.houseRoofType||'unknown'):site.roofType;
    const houseBodyMat=new T.MeshStandardMaterial({color:0xcfd2ce,roughness:.93});
    const houseRoofMat=new T.MeshStandardMaterial({color:0x657077,roughness:.87,metalness:.08,side:T.DoubleSide});
    extraMaterials.push(houseBodyMat,houseRoofMat);
@@ -91,7 +93,7 @@ function mount(host,s,sitePhoto){
      plane([[x0,roofElevation,zFront],[cx,ridge,zFront],[cx,ridge,zRear],[x0,roofElevation,zRear]],houseRoofMat);
      plane([[cx,ridge,zFront],[x1,roofElevation,zFront],[x1,roofElevation,zRear],[cx,ridge,zRear]],houseRoofMat);
      plane([[x0,roofElevation,zFront],[x1,roofElevation,zFront],[cx,ridge,zFront],[cx,ridge,zFront]],houseRoofMat);
-   }else{
+   }else if(displayRoof==='hip'){
      const ridge=roofElevation+site.roofRise,cx=(x0+x1)/2,midZ=(zFront+zRear)/2;
      plane([[x0,roofElevation,zFront],[cx,ridge,midZ],[cx,ridge,midZ],[x1,roofElevation,zFront]],houseRoofMat);
      plane([[x0,roofElevation,zRear],[x1,roofElevation,zRear],[cx,ridge,midZ],[cx,ridge,midZ]],houseRoofMat);
@@ -145,8 +147,20 @@ function mount(host,s,sitePhoto){
        extraMaterials.push(water);
        const p=context.pool;
        // Geometry is a 2D placeholder of unknown plan location & dimensions.
-       const g=p.shape==='circular'?new T.CircleGeometry(Math.min(p.width,p.depth)*.50,42)
-         :new T.PlaneGeometry(p.width,p.depth);
+       let g;
+       if(p.shape==='circular'){
+         g=new T.CircleGeometry(Math.min(p.width,p.depth)*.5,48);
+       }else if(p.shape==='freeform'){
+         // Irregular conceptual outline; never a traced/measured pool footprint.
+         const outline=new T.Shape();
+         outline.moveTo(-p.width*.42,-p.depth*.42);
+         outline.bezierCurveTo(-p.width*.70,-p.depth*.08,-p.width*.28,p.depth*.48,0,p.depth*.45);
+         outline.bezierCurveTo(p.width*.42,p.depth*.54,p.width*.58,p.depth*.22,p.width*.39,0);
+         outline.bezierCurveTo(p.width*.25,-p.depth*.51,-p.width*.02,-p.depth*.55,-p.width*.42,-p.depth*.42);
+         g=new T.ShapeGeometry(outline,18);
+       }else{
+         g=new T.PlaneGeometry(p.width,p.depth);
+       }
        const pool=mesh(g,water,p.cx,.025,p.cz);
        pool.rotation.x=-Math.PI/2;
        if(context.spa){
