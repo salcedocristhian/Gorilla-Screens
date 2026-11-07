@@ -38,6 +38,13 @@ async function importResult(name,count,pool){
   for(let i=0;i<count;i++)await checkboxes.nth(i).check();
   await page.locator('#vision-authorized').check();
   await page.locator('[data-a="vision-import"]').click();
+  await page.waitForTimeout(500);
+  console.log('AI SAVE DEBUG',JSON.stringify({
+    toast:await page.locator('#toast').innerText(),
+    checked:await page.locator('[data-ai-photo]:checked').count(),
+    project:await page.evaluate(async()=>{const p=(await GSSStore.listProjects()).find(x=>x.id===location.hash.split('/')[1]);return {id:p?.id,hasVision:!!p?.aiVision};}),
+    hasResult:await page.getByText('AI ANALYSIS · PENDING HUMAN REVIEW').count()
+  }));
   await page.getByText('AI ANALYSIS · PENDING HUMAN REVIEW').waitFor();
   await page.locator('.tabbar a[href$="/studio"]').click();
   await page.getByText('AI Vision · Pending human review').waitFor();
