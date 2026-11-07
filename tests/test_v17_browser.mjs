@@ -62,6 +62,22 @@ try{
    throw Error('House context preview failed: '+(await page.locator('#v17-preview').innerText())+' | '+JSON.stringify(previewWarnings.slice(-12))+' | '+JSON.stringify(pageErrors));
  }
  await page.locator('#v17-preview canvas').waitFor({timeout:20000});
+ await page.locator('#v17-ai-details summary').click();
+ const geminiResult={status:'draft-needs-human-review',model:'gemini-3.5-flash-lite',
+   findings:{visibleHouseFeatures:['Covered porch roof','Stucco exterior'],
+     fasciaAndAttachmentObservations:['Actual attachment is obscured'],
+     patioAndObstacles:['Patio furniture'],
+     measurementsToVerify:['Measure existing fascia'],
+     suggestedEnclosureDesign:['Check clearance around support posts'],
+     limitations:['No scale markers or calibrated dimensions']}};
+ await page.locator('#v17-ai-json').fill(JSON.stringify(geminiResult));
+ page.once('dialog',async dialog=>dialog.accept());
+ await page.locator('[data-v17-action="ai-import"]').click();
+ await page.getByText('Resultado DRAFT_REVIEW_REQUIRED').waitFor({timeout:20000});
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-openings'),'0','Do not fabricate openings from free-form vision prose');
+ await page.locator('[data-v17-action="ai-review"]').click();
+ await page.getByText('Resultado REVIEWED_VISUAL_ONLY').waitFor({timeout:20000});
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-reviewed'),'true');
  assert.equal(await page.locator('#v17-preview').getAttribute('data-house-reference'),'true','Own-project photos automatically enable existing house context');
  assert.ok(await page.locator('#v17-preview').getAttribute('data-photo-reference'),'Project photo is used, not a sample from another project');
  const photoId=await page.locator('[data-v17-site="photoId"]').inputValue();
