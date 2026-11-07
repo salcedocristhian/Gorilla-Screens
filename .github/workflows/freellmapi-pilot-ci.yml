@@ -27,3 +27,22 @@ jobs:
         run: node tests/test_freellmapi.mjs
       - name: Original Gorilla V17 regression
         run: node tests/test_v17.mjs
+
+  vision-browser-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Test local-only vision pilot with mock provider in Chromium
+        run: node tests/test_freellmapi_browser.mjs
+      - name: Upload optional mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: freellmapi-mobile-qa
+          path: qa-freellmapi-mobile.png
+          if-no-files-found: ignore
