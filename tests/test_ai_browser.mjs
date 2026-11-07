@@ -18,10 +18,12 @@ async function start(){
   await page.goto(base);
   await page.locator('[data-a="newphoto"]').click();
   await page.locator('.tabbar a[href$="/fotos"]').click();
+  await page.locator('details:has(#vision-json) summary').click();
   await page.locator('#vision-json').waitFor();
   return page.url().split('#/p/')[1].split('/')[0];
 }
 async function importResult(name,count,pool){
+  if(!(await page.locator('details:has(#vision-json)').evaluate(el=>el.open))) await page.locator('details:has(#vision-json) summary').click();
   const result={
     status:'draft-needs-human-review',model:'gemini-3.5-flash-lite',
     findings:{
@@ -66,6 +68,7 @@ try{
   await page.locator('.topbar a[aria-label="Volver a proyectos"]').click();
   await page.locator('[data-a="newphoto"]').click();
   await page.locator('.tabbar a[href$="/fotos"]').click();
+  await page.locator('details:has(#vision-json) summary').click();
   await page.locator('#vision-json').waitFor();
   const idB=page.url().split('#/p/')[1].split('/')[0];
   assert.notEqual(idA,idB);
