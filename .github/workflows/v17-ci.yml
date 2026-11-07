@@ -22,6 +22,8 @@ jobs:
         run: node tests/test_model.mjs
       - name: V17 geometry and procurement invariants
         run: node tests/test_v17.mjs
+      - name: AI Vision project isolation and JSON contract
+        run: node tests/test_vision.mjs
 
   browser-smoke:
     runs-on: ubuntu-24.04
