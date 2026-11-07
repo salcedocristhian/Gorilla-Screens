@@ -73,7 +73,7 @@ jobs:
         run: |
           mkdir -p /tmp/gorilla-static
           cp index.html sw.js manifest.webmanifest robots.txt _headers /tmp/gorilla-static/
-          cp -R assets css js /tmp/gorilla-static/
+          cp -R assets css js docs /tmp/gorilla-static/
           test -f /tmp/gorilla-static/index.html
           test -f /tmp/gorilla-static/js/vision-api.js
           cd /tmp/gorilla-static
