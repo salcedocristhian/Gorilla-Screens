@@ -62,11 +62,48 @@ try{
    throw Error('House context preview failed: '+(await page.locator('#v17-preview').innerText())+' | '+JSON.stringify(previewWarnings.slice(-12))+' | '+JSON.stringify(pageErrors));
  }
  await page.locator('#v17-preview canvas').waitFor({timeout:20000});
+ await page.locator('#v17-ai-details summary').click();
+ const geminiResult={status:'draft-needs-human-review',model:'gemini-3.5-flash-lite',
+   findings:{visibleHouseFeatures:['Covered porch roof','Stucco exterior'],
+     fasciaAndAttachmentObservations:['Actual attachment is obscured'],
+     patioAndObstacles:['Patio furniture'],
+     measurementsToVerify:['Measure existing fascia'],
+     suggestedEnclosureDesign:['Check clearance around support posts'],
+     limitations:['No scale markers or calibrated dimensions'],
+     siteGeometry:{
+       photoCount:1,stories:2,coveredPatio:true,poolPresent:true,spaPresent:true,
+       balconyPresent:true,houseRoofType:'unknown',poolShape:'freeform',
+       deckSurface:'pavers',contextConfidence:'medium',
+       candidateAttachmentWalls:[{id:'rear-stucco',level:1,visibleMaterial:'stucco',
+         observation:'Rear wall facing patio',confidence:'medium',evidencePhotoIndices:[1],
+         structuralSuitability:'unverified'}],
+       upperAttachmentZones:[{id:'upper-edge',level:2,description:'Second story facade edge',
+         confidence:'low',evidencePhotoIndices:[1],structuralSuitability:'unverified'}],
+       recommendedCaptureMissingViews:['Aerial view'],facadeOpenings:[]
+     }}};
+ await page.locator('#v17-ai-json').fill(JSON.stringify(geminiResult));
+ page.once('dialog',async dialog=>dialog.accept());
+ await page.locator('[data-v17-action="ai-import"]').click();
+ await page.getByText('Resultado DRAFT_REVIEW_REQUIRED').waitFor({timeout:20000});
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-openings'),'0','Do not fabricate openings from free-form vision prose');
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-stories'),'2','Render schematic two-storey existing house');
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-pool'),'true');
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-spa'),'true');
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-balcony'),'true');
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-covered-patio'),'true');
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-attachment-bands'),'2');
+ await page.getByText('House levels',{exact:true}).waitFor();
+ await page.getByText('More photo views needed:').waitFor();
+
+ page.once('dialog',async dialog=>dialog.accept());
+ await page.locator('[data-v17-action="ai-review"]').click();
+ await page.getByText('Resultado REVIEWED_VISUAL_ONLY').waitFor({timeout:20000});
+ assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-reviewed'),'true');
  assert.equal(await page.locator('#v17-preview').getAttribute('data-house-reference'),'true','Own-project photos automatically enable existing house context');
  assert.ok(await page.locator('#v17-preview').getAttribute('data-photo-reference'),'Project photo is used, not a sample from another project');
  const photoId=await page.locator('[data-v17-site="photoId"]').inputValue();
  assert.ok(photoId,'Photo reference should be selected from project photo list');
- await page.locator('.v17-site-more summary').click();
+ await page.locator('.v17-site-reference .v17-site-more summary').click();
  const oldHeight=Number(await page.locator('[data-v17-key="height"]').inputValue());
  await page.locator('[data-v17-key="site-fasciaHeight"]').fill(String(oldHeight+1));
  await page.locator('[data-v17-key="site-fasciaHeight"]').dispatchEvent('change');
