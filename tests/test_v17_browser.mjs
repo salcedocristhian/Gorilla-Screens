@@ -92,7 +92,7 @@ try{
  assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-balcony'),'true');
  assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-covered-patio'),'true');
  assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-attachment-bands'),'2');
- await page.getByText('House levels').waitFor();
+ await page.getByText('House levels',{exact:true}).waitFor();
  await page.getByText('More photo views needed:').waitFor();
 
  page.once('dialog',async dialog=>dialog.accept());
