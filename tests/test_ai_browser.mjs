@@ -63,6 +63,27 @@ try{
   await page.goto(base+'#/p/'+idB+'/studio');
   await page.getByText('AI Vision · Pending human review').waitFor();
   assert.match(await page.locator('.v17-site-reference').innerText(),/observada/);
+  // Backup/import must re-key AI source photo IDs and preserve project ownership.
+  await page.goto(base+'#/p/'+idA+'/entregar');
+  const backupPromise=page.waitForEvent('download');
+  await page.locator('[data-a="export"]').click();
+  const backupDownload=await backupPromise;
+  const backup=JSON.parse(fs.readFileSync(await backupDownload.path(),'utf8'));
+  assert.equal(backup.project.aiVision.projectId,idA);
+  assert.equal(backup.project.aiVision.photoIds.length,3);
+  await page.goto(base);
+  await page.locator('input[data-a="import"]').setInputFiles({
+    name:'project-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(backup))
+  });
+  await page.locator('.tabbar a[href$="/fotos"]').waitFor();
+  const idC=page.url().split('#/p/')[1].split('/')[0];
+  assert.notEqual(idC,idA,'Import creates a distinct project identifier');
+  await page.locator('.tabbar a[href$="/fotos"]').click();
+  await page.getByText('AI ANALYSIS · PENDING HUMAN REVIEW').waitFor();
+  assert.match(await page.locator('[aria-label="AI Vision project analysis"]').innerText(),/Evidencia vinculada al proyecto/);
+  page.once('dialog',dialog=>dialog.accept());
+  await page.locator('[data-del]').first().click();
+  await page.getByText('Faltan fotos de evidencia').waitFor();
   assert.deepEqual(errors,[],'No browser exceptions');
   console.log('PASS: two independent houses, 3/5 photos, local AI findings only, Studio reference');
 }finally{await browser.close();}
