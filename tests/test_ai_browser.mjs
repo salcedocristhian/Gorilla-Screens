@@ -47,7 +47,14 @@ async function importResult(name,count,pool){
 }
 try{
   const idA=await start();
-  for(const cat of ['frente','west','east'])await addPhoto(cat);
+  // Regression: an operator may paste Gemini JSON before uploading any project photos.
+  await page.getByText('Todavía no hay fotos guardadas aquí').waitFor();
+  await page.locator('#vision-json').fill('DRAFT HOUSE A');
+  for(const cat of ['frente','west','east']){
+    await addPhoto(cat);
+    assert.equal(await page.locator('#vision-json').inputValue(),'DRAFT HOUSE A',
+      'Pasted JSON must survive the photos-tab rerender during upload');
+  }
   await importResult('arches',3,false);
   await page.locator('.topbar a[aria-label="Volver a proyectos"]').click();
   await page.locator('[data-a="newphoto"]').click();
@@ -55,6 +62,7 @@ try{
   await page.locator('#vision-json').waitFor();
   const idB=page.url().split('#/p/')[1].split('/')[0];
   assert.notEqual(idA,idB);
+  assert.equal(await page.locator('#vision-json').inputValue(),'', 'JSON draft cannot leak across houses');
   for(const cat of ['frente','west','east','south','aerea'])await addPhoto(cat);
   await importResult('pool',5,true);
   await page.goto(base+'#/p/'+idA+'/studio');
