@@ -11,8 +11,9 @@ assert.throws(()=>api.selectedPhotos('house-b',a),/no pertenece/);
 assert.throws(()=>api.selectedPhotos('house-a',[a[0],a[0]]),/inválido/);
 assert.throws(()=>api.endpoint('http://example.com/api/analyze'),/HTTPS/);
 assert.throws(()=>api.endpoint('https://example.com/admin'),/HTTPS/);
+assert.throws(()=>api.endpoint('https://attacker.example/api/analyze'),/HTTPS/);
 let seen=0;
-const result=await api.analyze({projectId:'house-a',photos:a,token:'P'.repeat(48),url:'https://example.workers.dev/api/analyze',
+const result=await api.analyze({projectId:'house-a',photos:a,token:'P'.repeat(48),url:'https://gorilla-studio-ai-bridge.salcedo-cristhian-2020.workers.dev/api/analyze',
   fetchImpl:async(url,opts)=>{
     seen++;
     assert.equal(opts.method,'POST');
