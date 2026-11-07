@@ -20,6 +20,8 @@ jobs:
           done
       - name: Original model regression
         run: node tests/test_model.mjs
+      - name: Volatile storage fallback warning regression
+        run: node tests/test_storage_warning.mjs
       - name: V17 geometry and procurement invariants
         run: node tests/test_v17.mjs
 
