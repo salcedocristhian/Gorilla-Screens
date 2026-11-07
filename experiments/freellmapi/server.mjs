@@ -11,7 +11,7 @@ const host='127.0.0.1',port=Number(process.env.GORILLA_AI_PORT||8788);
 const routerUrl=(process.env.FREELLMAPI_BASE_URL||'http://127.0.0.1:3001/v1').replace(/\/$/,'');
 const apiKey=process.env.FREELLMAPI_API_KEY||'';
 const model=process.env.FREELLMAPI_MODEL||'auto';
-const MAX_BODY=5_800_000,MAX_PER_IMAGE=1_050_000;
+const MAX_BODY=7_800_000,MAX_PER_IMAGE=1_050_000;
 const allowed=new Map([
  ['/experiments/freellmapi/index.html',['experiments/freellmapi/index.html','text/html; charset=utf-8']],
  ['/experiments/freellmapi/pilot.js',['experiments/freellmapi/pilot.js','text/javascript; charset=utf-8']],
@@ -140,6 +140,10 @@ async function analyze(payload){
 export function startServer(){
  const server=createServer(async(req,res)=>{
   if(!isLoopback(req.socket.remoteAddress)){send(res,403,{error:'Localhost only'});return}
+  const requestedHost=String(req.headers.host||'');
+  if(!['127.0.0.1:'+port,'localhost:'+port].includes(requestedHost)){
+   send(res,403,{error:'Invalid local Host header'});return;
+  }
   const pathname=new URL(req.url||'/', 'http://127.0.0.1').pathname;
   if(req.method==='GET'&&pathname==='/api/ai/health'){
    send(res,200,{status:'experimental',configured:!!apiKey,model,
