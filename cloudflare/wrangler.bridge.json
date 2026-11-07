@@ -5,7 +5,14 @@
   "compatibility_date": "2026-11-07",
   "workers_dev": true,
   "ratelimits": [
-    { "name": "AI_RATE_LIMIT", "namespace_id": "24017",
-      "simple": { "limit": 5, "period": 60 } }
-  ]
+    {
+      "name": "AI_RATE_LIMIT",
+      "namespace_id": "24017",
+      "simple": {
+        "limit": 5,
+        "period": 60
+      }
+    }
+  ],
+  "keep_vars": true
 }
