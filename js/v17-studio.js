@@ -51,12 +51,40 @@ function siteReference(s,photos,p){
    delta+
    '</section>';
 }
-function design(s,r,p,photos){
+function reconstructionPanel(s,photos,selectedPhotos){
+ const rec=s.site?.reconstruction;
+ const eligible=photos.filter(p=>p.cat!=='render');
+ const choices=eligible.map(p=>'<label class="v17-ai-photo">'+
+   '<input type="checkbox" data-v17-ai-photo="'+esc(p.id)+'" '+(selectedPhotos.has(p.id)?'checked':'')+'>'+
+   '<span>'+esc(p.cat||'photo')+' · '+esc(new Date(p.createdAt||Date.now()).toLocaleDateString('en-US'))+'</span></label>').join('');
+ const state=rec?window.GSSReconstruction.formatStatus(s):'NONE';
+ const summary=rec?'<div class="v17-ai-results">'+
+   '<strong>Resultado '+esc(state)+'</strong><p>'+esc(rec.features.slice(0,4).join(' · ')||'No visible features described')+'</p>'+
+   '<p>'+rec.openings.length+' normalized facade openings · '+rec.toVerify.length+' measurements to verify · '+rec.sourcePhotoIds.length+' own-project photos</p>'+
+   '<p class="v17-ai-warning">Reference-only. No dimension, wind approval, survey, or takeoff inferred from AI.</p>'+
+   (rec.reviewed?'':action('ai-review','Reviewed as visual reference','sec'))+
+   '</div>':'<p class="lead smalltext">No AI draft stored for this project. The existing enclosure model stays unchanged.</p>';
+ return '<section class="v17-ai-panel" aria-label="AI site reconstruction">'+
+  '<div class="v17-site-header"><div><div class="cap">AI SITE RECONSTRUCTION · V1 EXPERIMENT</div>'+
+  '<h3>House context for the enclosure</h3><p>Gemini observations become a schematic house reference. The screen enclosure remains the editable design.</p></div>'+
+  '<span class="v17-pill">Human review</span></div>'+
+  '<details class="v17-site-more" id="v17-ai-details"><summary>Generate reference from Gemini findings <span>⌄</span></summary>'+
+  '<p class="lead smalltext">Select photos from this property only (maximum five). Our private Cloudflare pilot currently analyzes one photo. Use its JSON result here; multi-photo geometry calibration remains future work.</p>'+
+  '<div class="v17-ai-photos">'+(choices||'<p class="v17-note">Add photos in the Fotos tab first.</p>')+'</div>'+
+  '<div class="v17-btnrow"><a class="btn sec" href="https://gorilla-ai-vision.salcedo-cristhian-2020.workers.dev/pilot" target="_blank" rel="noopener noreferrer">Open protected Gemini pilot</a></div>'+
+  '<label class="v17-field"><span>Paste Gemini /pilot JSON (without private keys)</span>'+
+  '<textarea id="v17-ai-json" rows="5" maxlength="30000" placeholder=\'{"status":"draft-needs-human-review","findings":{...}}\'></textarea></label>'+
+  '<div class="v17-btnrow">'+action('ai-import','Generate draft house reference','sec')+'</div>'+
+  '<p class="lead smalltext">The current Gemini output lists visible features. Precise openings cannot be drawn unless a future vision response supplies explicit normalized facade coordinates. No measurements are inferred.</p>'+
+  '</details>'+summary+'</section>';
+}
+function design(s,r,p,photos,selectedPhotos){
  const types=[['mansard','Mansard'],['flat','Flat screen'],['gable','Gable'],['irp','IRP Solid'],['mixed','Mixed IRP + Screen']];
  const profileOptions=vals=>vals.map(v=>[v,v.replace('x','×')]);
  return '<div class="v17-grid"><section class="card"><div class="v17-cardhead"><div><div class="cap">LIVE GEOMETRY</div><h2>Enclosure · 3D</h2></div><span class="v17-pill">Concept design</span></div>'+
    '<div id="v17-preview" class="v17-stage"><div class="v17-stage-empty">Introduce ancho, profundidad y altura para visualizar la estructura.</div></div>'+
    siteReference(s,photos,p)+
+   reconstructionPanel(s,photos,selectedPhotos)+
    '<div class="v17-metrics"><div><b>'+fmt(r.geometry.W)+'</b><small>Front width</small></div><div><b>'+fmt(r.geometry.D)+'</b><small>Depth</small></div><div><b>'+fmt(r.geometry.H)+'</b><small>Wall height</small></div></div>'+
    info('Perfiles y conexiones son presets geométricos, sujetos a ingeniería de viento, anclajes y cimentación. Ninguna cota se infiere de las fotos.')+
    '</section><div><section class="card"><div class="cap">01 · DATOS DEL ENCLOSURE</div>'+
@@ -296,6 +324,7 @@ function mount({project,photos,host,save,notify}){
  if(previousPreview){previousPreview.destroy();previousPreview=null;}
  const hadSite=!!project.studioV17?.site;
  let s=E.get(project);project.studioV17=s;
+ const selectedPhotos=new Set((s.site?.reconstruction?.sourcePhotoIds||photos.filter(p=>p.cat!=='render').slice(0,5).map(p=>p.id)).filter(id=>photos.some(p=>p.id===id)));
  const source=photos.find(x=>x.cat==='porche')||photos.find(x=>x.cat==='frente')||photos.find(x=>x.cat==='street');
  const hadPhoto=!!s.site.photoId;
  if(source&&!hadPhoto){
@@ -307,14 +336,16 @@ function mount({project,photos,host,save,notify}){
  const tell=notify||((message)=>alert(message));
  function render(){
    const detailsWasOpen=host.querySelector('.v17-site-more')?.open===true;
+   const aiDetailsOpen=host.querySelector('#v17-ai-details')?.open===true;
    if(previousPreview){previousPreview.destroy();previousPreview=null;}
    const r=E.takeoff(s);
-   const body={design:()=>design(s,r,project,photos),match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project));
+   const body={design:()=>design(s,r,project,photos,selectedPhotos),match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project,photos,selectedPhotos));
    host.innerHTML='<div class="v17-shell"><header class="v17-heading"><div><div class="cap">GORILLA SCREEN STUDIO · V17 WORKSPACE</div><h1>Design to Purchase</h1><p class="lead">Diseña, presenta, calcula y prepara compras — sin perder el control humano.</p></div><span class="v17-beta">FIELD PILOT</span></header>'+
     '<nav class="v17-nav" aria-label="Studio sections">'+[
     ['design','▧','Design'],['match','◐','Photo Match'],['docs','▤','Deliverables'],['buy','▦','Takeoff & Order']
    ].map(x=>'<button data-v17-tab="'+x[0]+'" '+(active===x[0]?'aria-current="page"':'')+'><span>'+x[1]+'</span>'+x[2]+'</button>').join('')+'</nav>'+body()+'</div>';
    if(detailsWasOpen&&host.querySelector('.v17-site-more'))host.querySelector('.v17-site-more').open=true;
+   if(aiDetailsOpen&&host.querySelector('#v17-ai-details'))host.querySelector('#v17-ai-details').open=true;
    host.querySelectorAll('[data-v17-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.v17Tab;render();});
    host.querySelectorAll('[data-v17-key]').forEach(input=>{
       input.onchange=()=>{
@@ -339,6 +370,14 @@ function mount({project,photos,host,save,notify}){
        store();setTimeout(render,0);
      };
    });
+   host.querySelectorAll('[data-v17-ai-photo]').forEach(input=>{
+     input.onchange=()=>{
+       if(input.checked){
+         if(selectedPhotos.size>=5){input.checked=false;tell('Selecciona máximo cinco fotos de la misma propiedad.');return;}
+         selectedPhotos.add(input.dataset.v17AiPhoto);
+       }else selectedPhotos.delete(input.dataset.v17AiPhoto);
+     };
+   });
    host.querySelectorAll('[data-v17-match]').forEach(input=>{
       input.value=s.match[input.dataset.v17Match]||input.value;
       input.oninput=()=>{
@@ -358,6 +397,22 @@ function mount({project,photos,host,save,notify}){
       b.disabled=true;
       try{
        const kind=b.dataset.v17Action,report=E.takeoff(s),valid=report.geometry.valid;
+       if(kind==='ai-import'){
+         if(!window.GSSReconstruction)throw Error('Reconstruction helper is not loaded.');
+         const raw=host.querySelector('#v17-ai-json')?.value||'';
+         if(!raw.trim())throw Error('Paste a JSON result from the protected Gemini pilot.');
+         const draft=window.GSSReconstruction.parse(raw);
+         if(!confirm('Generate an UNVERIFIED house context from these AI observations? Enclosure dimensions, prices and takeoff will not change.'))return;
+         window.GSSReconstruction.apply(s,draft,[...selectedPhotos],photos.filter(p=>p.cat!=='render').map(p=>p.id));
+         store();tell('AI draft saved to this project for review. No construction measurements were changed.');
+         setTimeout(render,0);return;
+       }
+       if(kind==='ai-review'){
+         if(!confirm('Mark this as a REVIEWED VISUAL REFERENCE only? This is NOT field or engineering verification.'))return;
+         window.GSSReconstruction.approveAsReference(s);store();
+         tell('Visual reference reviewed; dimensions still require field verification.');
+         setTimeout(render,0);return;
+       }
        if(kind==='snap'){
          const fascia=Number(s.site?.fasciaHeight);
          if(!(fascia>0))throw Error('Primero introduce la elevación de fascia medida en campo.');
