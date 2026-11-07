@@ -299,7 +299,7 @@
       '<h2>Análisis fotográfico con revisión humana</h2>'+
       '<p class="lead">Analiza las fotos autorizadas en el piloto privado. Copia el JSON y vincúlalo aquí a las fotos del MISMO proyecto. No se envían fotos desde GitHub Pages.</p>'+
       '<a class="btn sec block" href="https://gorilla-ai-vision.salcedo-cristhian-2020.workers.dev/pilot" target="_blank" rel="noopener noreferrer" style="text-decoration:none">↗ Abrir AI Vision Pilot</a>'+
-      '<div class="field"><label for="vision-json">Pegar JSON completo de Gemini</label><textarea id="vision-json" rows="5" placeholder="{ \"status\": \"draft-needs-human-review\", \"findings\": { ... } }"></textarea></div>'+
+      '<div class="field"><label for="vision-json">Pegar JSON completo de Gemini</label><textarea id="vision-json" rows="5" placeholder="Pega aquí el JSON copiado desde el piloto"></textarea></div>'+
       '<p class="lead smalltext">Selecciona exactamente las fotografías usadas en ese análisis (máximo cinco). El conteo se valida contra el JSON.</p>'+
       '<div style="max-height:210px;overflow:auto">'+S.photos.map(ph=>'<label style="display:flex;align-items:center;gap:10px;padding:8px 0"><input type="checkbox" data-ai-photo value="'+esc(ph.id)+'" '+(a?.photoIds?.includes(ph.id)?'checked':'')+'><span>'+esc(ph.cat)+' · '+new Date(ph.createdAt).toLocaleDateString('en-US')+'</span></label>').join('')+'</div>'+
       '<button class="btn block" data-a="vision-import">Guardar análisis en este proyecto</button>'+result+'</section>';
