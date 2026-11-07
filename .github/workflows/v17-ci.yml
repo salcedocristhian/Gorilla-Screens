@@ -72,7 +72,8 @@ jobs:
       - name: Package exactly the public frontend files
         run: |
           mkdir -p /tmp/gorilla-static
-          cp index.html sw.js manifest.webmanifest robots.txt _headers /tmp/gorilla-static/
+          cp index.html sw.js manifest.webmanifest /tmp/gorilla-static/
+          for optional in robots.txt _headers; do if test -f "$optional"; then cp "$optional" /tmp/gorilla-static/; fi; done
           cp -R assets css js docs /tmp/gorilla-static/
           test -f /tmp/gorilla-static/index.html
           test -f /tmp/gorilla-static/js/vision-api.js
