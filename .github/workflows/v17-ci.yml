@@ -24,6 +24,8 @@ jobs:
         run: node tests/test_v17.mjs
       - name: V17 Gemini site reconstruction and isolation
         run: node tests/test_v17_reconstruct.mjs
+      - name: Cloudflare multi-photo Worker syntax
+        run: node --check cloudflare/gorilla-vision-multiphoto-v2.js
 
   browser-smoke:
     runs-on: ubuntu-24.04
