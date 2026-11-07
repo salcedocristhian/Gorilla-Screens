@@ -180,7 +180,7 @@ export default {
    if(!m||m[1].length>1120000)return json({error:'Only compressed JPEG under ~800 KB allowed'},400);
    base64.push(m[1]);
   }
-  const parts=[{text:PROMPT}].concat(base64.map(data=>({inline_data:{mime_type:'image/jpeg',data}})));
+  const parts=[{text:PROMPT},...base64.map(data=>({inline_data:{mime_type:'image/jpeg',data}}))];
   const payload={contents:[{role:'user',parts}],
    generationConfig:{responseMimeType:'application/json',temperature:.1,maxOutputTokens:3200}};
   try{
