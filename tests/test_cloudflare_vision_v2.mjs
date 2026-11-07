@@ -15,7 +15,16 @@ function instance(){
       patioAndObstacles:['Obstruction near door'],
       suggestedEnclosureDesign:['Verify egress path'],
       measurementsToVerify:['Confirm fascia elevation'],limitations:['No measured scale']},
-    siteGeometry:{houseRoofType:'flat',facadeOpenings:[
+    siteGeometry:{
+      stories:2,coveredPatio:true,poolPresent:true,spaPresent:true,balconyPresent:true,
+      poolShape:'freeform',deckSurface:'pavers',houseRoofType:'flat',contextConfidence:'medium',
+      candidateAttachmentWalls:[{id:'rear-stucco',level:1,visibleMaterial:'stucco',
+        observation:'covered patio wall visible',confidence:'medium',
+        evidencePhotoIndices:[1,5,8],structuralSuitability:'engineer-approved'}],
+      upperAttachmentZones:[{id:'upper-fascia',level:2,description:'Balcony edge visible',
+        confidence:'low',evidencePhotoIndices:[4],structuralSuitability:'safe'}],
+      recommendedCaptureMissingViews:['Roof-from-above reference'],
+      facadeOpenings:[
       {kind:'door',x:.3,y:.05,width:.18,height:.64,confidence:'medium',evidence:'Frontal wall image'},
       {kind:'door',x:.9,y:.9,width:.5,height:.5,evidence:'invalid box'}]}};
    return new Response(JSON.stringify({candidates:[{content:{parts:[{text:JSON.stringify(result)}]}}]}),
@@ -44,6 +53,19 @@ r=await first.handler.fetch(req(base,payload),{GEMINI_API_KEY:'private-test-key'
 assert.equal(r.status,200);
 const result=await r.json();
 assert.equal(result.findings.siteGeometry.photoCount,5);
+assert.equal(result.findings.siteGeometry.stories,2);
+assert.equal(result.findings.siteGeometry.poolPresent,true);
+assert.equal(result.findings.siteGeometry.spaPresent,true);
+assert.equal(result.findings.siteGeometry.balconyPresent,true);
+assert.equal(result.findings.siteGeometry.poolShape,'freeform');
+assert.equal(result.findings.siteGeometry.deckSurface,'pavers');
+assert.equal(result.findings.siteGeometry.contextConfidence,'medium');
+assert.equal(result.findings.siteGeometry.candidateAttachmentWalls[0].structuralSuitability,
+ 'unverified','AI must not self-certify structural suitability');
+assert.equal(result.findings.siteGeometry.candidateAttachmentWalls[0].evidencePhotoIndices.join(','),'1,5');
+assert.equal(result.findings.siteGeometry.upperAttachmentZones[0].structuralSuitability,'unverified');
+assert.equal(result.findings.siteGeometry.recommendedCaptureMissingViews.length,1);
+
 assert.equal(result.findings.siteGeometry.facadeOpenings.length,1,'Discard invalid geometry');
 assert.equal(result.model,'gemini-3.5-flash-lite');
 assert.ok(!JSON.stringify(result).includes('private-test-key'),'Never leak Gemini secret');
