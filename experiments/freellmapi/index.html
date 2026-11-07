@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0f13">
+<title>Gorilla AI Pilot · FreeLLMAPI</title>
+<link rel="stylesheet" href="./pilot.css">
+</head>
+<body>
+<main class="shell">
+ <header class="head">
+  <div class="brand"><span class="mark">G</span><span>GORILLA <b>SCREEN STUDIO</b></span></div>
+  <span class="tag">PRIVATE EXPERIMENT</span>
+  <h1>AI Site Analysis</h1>
+  <p>Tu casa es la referencia. El diseño del <strong>screen enclosure</strong> sigue siendo el protagonista.</p>
+  <p class="risk">Prueba local: no modifica tu app de GitHub Pages, no hace pedidos y no genera planos aprobados.</p>
+ </header>
+ <div id="connection" class="connection" role="status">Checking local AI router…</div>
+ <section class="card">
+  <div class="section-title"><span>01</span><div><h2>Fotografías del proyecto</h2><p>Usa la muestra de Boca Raton o carga hasta cinco fotos propias autorizadas.</p></div></div>
+  <div class="toolbar">
+   <button class="button outline" type="button" id="demo">Usar muestra de Boca Raton</button>
+   <label class="button outline picker">Añadir fotografías <input type="file" id="photos" multiple accept="image/jpeg,image/png,image/webp"></label>
+  </div>
+  <div id="gallery" class="gallery"><span class="muted">No hay fotografías seleccionadas.</span></div>
+  <div class="disclaimer">Las cinco imágenes de demostración son ejemplos guardados en el repositorio. Su uso aquí no confirma que representen medidas verificadas.</div>
+ </section>
+ <section class="card">
+  <div class="section-title"><span>02</span><div><h2>Dimensiones disponibles</h2><p>Opcional. Las medidas nunca se deducen como exactas desde las imágenes.</p></div></div>
+  <div class="fields">
+   <label>Front width · ft <input type="number" min="0" step=".1" id="width" placeholder="No verificado"></label>
+   <label>Depth · ft <input type="number" min="0" step=".1" id="depth" placeholder="No verificado"></label>
+   <label>Height · ft <input type="number" min="0" step=".1" id="height" placeholder="No verificado"></label>
+  </div>
+  <div class="checkbox-row"><input type="checkbox" id="consent"><label for="consent">Confirmo que tengo autorización para compartir estas fotografías con el proveedor de IA configurado en FreeLLMAPI. Entiendo que pueden procesarse fuera de mi dispositivo.</label></div>
+  <button class="button primary" id="analyze" disabled>Analyze with FreeLLMAPI</button>
+  <p class="muted small">El análisis de imágenes puede agotar cuotas gratuitas; el número de modelos que anuncia FreeLLMAPI no equivale a acceso ilimitado.</p>
+ </section>
+ <section class="card">
+  <div class="section-title"><span>03</span><div><h2>Propuesta para revisar</h2><p>El resultado se genera como un borrador, nunca como geometría aprobada.</p></div></div>
+  <div id="status" class="status" role="status">Selecciona fotografías, confirma autorización y pulsa Analyze.</div>
+  <div id="result" hidden></div>
+  <div class="toolbar" id="exports" hidden>
+   <button class="button outline" id="export">Exportar borrador JSON</button>
+   <button class="button outline" id="view">Vista 3D conceptual</button>
+  </div>
+  <div id="stage" hidden><div class="canvas" id="preview"></div>
+   <p class="muted small">La forma de la vivienda es esquemática y la foto se proyecta en una fachada plana. Las dimensiones 3D provienen de tus entradas manuales, NO del análisis visual.</p>
+  </div>
+ </section>
+ <footer>
+  <b>Gorilla × FreeLLMAPI — Beta privada</b>
+  <p>Sin cambio de main · Sin exposición de claves · Sin publicación de datos de clientes</p>
+  <a href="https://github.com/tashfeenahmed/freellmapi" target="_blank" rel="noopener noreferrer">Proyecto FreeLLMAPI</a>
+ </footer>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="/js/v17-engine.js"></script>
+<script src="/js/v17-preview.js"></script>
+<script src="./pilot.js"></script>
+</body>
+</html>
