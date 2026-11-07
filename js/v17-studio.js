@@ -58,7 +58,23 @@ function reconstructionPanel(s,photos,selectedPhotos){
    '<input type="checkbox" data-v17-ai-photo="'+esc(p.id)+'" '+(selectedPhotos.has(p.id)?'checked':'')+'>'+
    '<span>'+esc(p.cat||'photo')+' · '+esc(new Date(p.createdAt||Date.now()).toLocaleDateString('en-US'))+'</span></label>').join('');
  const state=rec?window.GSSReconstruction.formatStatus(s):'NONE';
+ const trait=v=>v===true?'Visible':v===false?'Not observed':'Uncertain';
+ const traits=rec?[
+   ['House levels',rec.stories??'Unknown'],
+   ['Covered patio',trait(rec.coveredPatio)],
+   ['Swimming pool',trait(rec.poolPresent)],
+   ['Spa',trait(rec.spaPresent)],
+   ['Balcony',trait(rec.balconyPresent)],
+   ['House roof',rec.roofType||'unknown'],
+   ['Deck finish',rec.deckSurface||'unknown'],
+   ['AI confidence',rec.contextConfidence||'low']
+ ].map(([name,val])=>'<div><small>'+esc(name)+'</small><strong>'+esc(val)+'</strong></div>').join(''):'';
  const summary=rec?'<div class="v17-ai-results">'+
+   '<div class="v17-ai-geometry-metadata">'+traits+'</div>'+
+   '<p class="v17-ai-warning">These are inferred visual categories, NOT measured house geometry.</p>'+
+   '<p><strong>'+rec.attachments.length+' candidate wall zones · '+rec.upperZones.length+
+   ' upper zones</strong> — engineering suitability unverified</p>'+
+   (rec.missingViews.length?'<p><strong>More photo views needed:</strong> '+esc(rec.missingViews.join(' · '))+'</p>':'')+
    '<strong>Resultado '+esc(state)+'</strong><p>'+esc(rec.features.slice(0,4).join(' · ')||'No visible features described')+'</p>'+
    '<p>'+rec.openings.length+' normalized facade openings · '+rec.toVerify.length+' measurements to verify · '+rec.sourcePhotoIds.length+' own-project photos</p>'+
    '<p class="v17-ai-warning">Reference-only. No dimension, wind approval, survey, or takeoff inferred from AI.</p>'+
@@ -69,13 +85,13 @@ function reconstructionPanel(s,photos,selectedPhotos){
   '<h3>House context for the enclosure</h3><p>Gemini observations become a schematic house reference. The screen enclosure remains the editable design.</p></div>'+
   '<span class="v17-pill">Human review</span></div>'+
   '<details class="v17-site-more" id="v17-ai-details"><summary>Generate reference from Gemini findings <span>⌄</span></summary>'+
-  '<p class="lead smalltext">Select only the property photos that Gemini actually analyzed. The current private Cloudflare pilot analyzes ONE photo. Multi-photo reconstruction will require an upgraded Worker.</p>'+
+  '<p class="lead smalltext">Select the same 1–5 photos actually analyzed by your private Cloudflare Worker. The photo count must match the JSON; do not select proposed renders.</p>'+
   '<div class="v17-ai-photos">'+(choices||'<p class="v17-note">Add photos in the Fotos tab first.</p>')+'</div>'+
   '<div class="v17-btnrow"><a class="btn sec" href="https://gorilla-ai-vision.salcedo-cristhian-2020.workers.dev/pilot" target="_blank" rel="noopener noreferrer">Open protected Gemini pilot</a></div>'+
   '<label class="v17-field"><span>Paste Gemini /pilot JSON (without private keys)</span>'+
   '<textarea id="v17-ai-json" rows="5" maxlength="30000" placeholder=\'{"status":"draft-needs-human-review","findings":{...}}\'></textarea></label>'+
   '<div class="v17-btnrow">'+action('ai-import','Generate draft house reference','sec')+'</div>'+
-  '<p class="lead smalltext">The current Gemini output lists visible features. Precise openings cannot be drawn unless a future vision response supplies explicit normalized facade coordinates. No measurements are inferred.</p>'+
+  '<p class="lead smalltext">With the new Gemini schema, Gorilla automatically places schematic house levels, a covered patio, a pool or spa and balcony only when visually supported. Their shapes, positions and heights are PLACEHOLDERS, not measured. Add verified site dimensions above; facade openings require explicit normalized coordinates.</p>'+
   '</details>'+summary+'</section>';
 }
 function design(s,r,p,photos,selectedPhotos){
