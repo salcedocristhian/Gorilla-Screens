@@ -7,10 +7,17 @@ function mount(host,s,sitePhoto){
  if(!T||!T.OrbitControls)throw Error('THREE or OrbitControls not available.');
  const W=+s.width,D=+s.depth,H=+s.height;
  const site=window.GSSV17Engine.siteLayout(s);
+ const context=window.GSSReconstruction?.contextLayout(s)||null;
  host.dataset.houseReference=site.enabled?'true':'false';
  host.dataset.photoReference=site.enabled&&sitePhoto?.url?String(sitePhoto.id):'';
  host.dataset.aiOpenings=String(s.site?.reconstruction?.openings?.length||0);
  host.dataset.aiReviewed=String(s.site?.reconstruction?.reviewed===true);
+ host.dataset.aiStories=String(s.site?.reconstruction?.stories??'unknown');
+ host.dataset.aiPool=String(s.site?.reconstruction?.poolPresent===true);
+ host.dataset.aiSpa=String(s.site?.reconstruction?.spaPresent===true);
+ host.dataset.aiCoveredPatio=String(s.site?.reconstruction?.coveredPatio===true);
+ host.dataset.aiBalcony=String(s.site?.reconstruction?.balconyPresent===true);
+ host.dataset.aiAttachmentBands=String(context?.attachmentBands?.length||0);
  if(!(W>0&&D>0&&H>0))return {destroy(){}};
  const color=s.finish==='white'?0xe9ece9:0x3d3028;
  const renderer=new T.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
@@ -20,9 +27,10 @@ function mount(host,s,sitePhoto){
  host.innerHTML='';host.appendChild(renderer.domElement);renderer.domElement.style.touchAction='none';
  const scene=new T.Scene();scene.background=new T.Color(0x91a5b4);
  const camera=new T.PerspectiveCamera(40,1,.2,1000);
- const span=Math.max(W,D,H,site.enabled?site.width:0,site.enabled?site.depth:0);
- camera.position.set(W*.9+span*.50,H*.85+span*.75,D*1.25+span*.9);
- camera.lookAt(W/2,H*.6,D/2);
+ const span=Math.max(W,D,H,site.enabled?site.width:0,site.enabled?site.depth:0,
+   site.enabled?context?.houseHeight||0:0);
+ camera.position.set(W*.9+span*.50,Math.max(H,context?.houseHeight||0)*.85+span*.75,D*1.25+span*.9);
+ camera.lookAt(W/2,Math.max(H,context?.houseHeight||0)*.48,D/2);
  const controls=new T.OrbitControls(camera,renderer.domElement);
  controls.enableDamping=true;controls.dampingFactor=.07;controls.maxPolarAngle=Math.PI*.49;
  controls.minDistance=Math.max(2,span*.25);controls.maxDistance=span*6;
@@ -68,29 +76,91 @@ function mount(host,s,sitePhoto){
  if(site.enabled){
    // Simple, editable volume at the site-facing fascia — never a photogrammetric mesh.
    const x0=site.x0,x1=site.x1,zFront=-.28,zRear=-site.depth-.28,eaves=site.fascia;
+   // A second/third story comes from an AI visual observation; its height is schematic.
+   const roofElevation=context?.houseHeight||eaves;
+   const conceptualRoof=s.site?.verified?site.roofType:context?.houseRoofType;
+   const displayRoof=['flat','gable','hip'].includes(conceptualRoof)?conceptualRoof:site.roofType;
    const houseBodyMat=new T.MeshStandardMaterial({color:0xcfd2ce,roughness:.93});
    const houseRoofMat=new T.MeshStandardMaterial({color:0x657077,roughness:.87,metalness:.08,side:T.DoubleSide});
    extraMaterials.push(houseBodyMat,houseRoofMat);
-   mesh(new T.BoxGeometry(site.width,Math.max(.1,eaves),site.depth),houseBodyMat,x0+site.width/2,eaves/2,-.28-site.depth/2);
-   if(site.roofType==='flat') {
-     mesh(new T.BoxGeometry(site.width+.9,.22,site.depth+.7),houseRoofMat,x0+site.width/2,eaves+.12,-.28-site.depth/2);
-   }else if(site.roofType==='gable'){
-     const ridge=eaves+site.roofRise,cx=(x0+x1)/2;
-     plane([[x0,eaves,zFront],[cx,ridge,zFront],[cx,ridge,zRear],[x0,eaves,zRear]],houseRoofMat);
-     plane([[cx,ridge,zFront],[x1,eaves,zFront],[x1,eaves,zRear],[cx,ridge,zRear]],houseRoofMat);
-     plane([[x0,eaves,zFront],[x1,eaves,zFront],[cx,ridge,zFront],[cx,ridge,zFront]],houseRoofMat);
+   mesh(new T.BoxGeometry(site.width,Math.max(.1,roofElevation),site.depth),houseBodyMat,x0+site.width/2,roofElevation/2,-.28-site.depth/2);
+   if(displayRoof==='flat') {
+     mesh(new T.BoxGeometry(site.width+.9,.22,site.depth+.7),houseRoofMat,x0+site.width/2,roofElevation+.12,-.28-site.depth/2);
+   }else if(displayRoof==='gable'){
+     const ridge=roofElevation+site.roofRise,cx=(x0+x1)/2;
+     plane([[x0,roofElevation,zFront],[cx,ridge,zFront],[cx,ridge,zRear],[x0,roofElevation,zRear]],houseRoofMat);
+     plane([[cx,ridge,zFront],[x1,roofElevation,zFront],[x1,roofElevation,zRear],[cx,ridge,zRear]],houseRoofMat);
+     plane([[x0,roofElevation,zFront],[x1,roofElevation,zFront],[cx,ridge,zFront],[cx,ridge,zFront]],houseRoofMat);
    }else{
-     const ridge=eaves+site.roofRise,cx=(x0+x1)/2,midZ=(zFront+zRear)/2;
-     plane([[x0,eaves,zFront],[cx,ridge,midZ],[cx,ridge,midZ],[x1,eaves,zFront]],houseRoofMat);
-     plane([[x0,eaves,zRear],[x1,eaves,zRear],[cx,ridge,midZ],[cx,ridge,midZ]],houseRoofMat);
-     plane([[x0,eaves,zFront],[x0,eaves,zRear],[cx,ridge,midZ],[cx,ridge,midZ]],houseRoofMat);
-     plane([[x1,eaves,zRear],[x1,eaves,zFront],[cx,ridge,midZ],[cx,ridge,midZ]],houseRoofMat);
+     const ridge=roofElevation+site.roofRise,cx=(x0+x1)/2,midZ=(zFront+zRear)/2;
+     plane([[x0,roofElevation,zFront],[cx,ridge,midZ],[cx,ridge,midZ],[x1,roofElevation,zFront]],houseRoofMat);
+     plane([[x0,roofElevation,zRear],[x1,roofElevation,zRear],[cx,ridge,midZ],[cx,ridge,midZ]],houseRoofMat);
+     plane([[x0,roofElevation,zFront],[x0,roofElevation,zRear],[cx,ridge,midZ],[cx,ridge,midZ]],houseRoofMat);
+     plane([[x1,roofElevation,zRear],[x1,roofElevation,zFront],[cx,ridge,midZ],[cx,ridge,midZ]],houseRoofMat);
+   }
+   if(context&&s.site?.reconstruction){
+     // Floor/elevation seam is a VISUAL cue, not a measured storey height.
+     const seamMat=new T.MeshStandardMaterial({color:0x83939e,metalness:.15,roughness:.7});
+     extraMaterials.push(seamMat);
+     for(let level=1;level<context.stories;level++){
+       const y=context.firstLevel+(level-1)*context.upperLevel;
+       beam([x0,y,-.245],[x1,y,-.245],.055,.06,seamMat);
+     }
+     if(context.coveredPatio){
+       const shadeMat=new T.MeshStandardMaterial({color:0xc7d4c6,metalness:.1,
+         roughness:.5,transparent:true,opacity:.40,side:T.DoubleSide,depthWrite:false});
+       extraMaterials.push(shadeMat);
+       const porchDepth=Math.min(D*.22,6);
+       mesh(new T.BoxGeometry(Math.min(W,site.width),.10,porchDepth),
+         shadeMat,W/2,context.firstLevel+.04,porchDepth/2);
+     }
+     if(context.balcony){
+       const balconyMat=new T.MeshStandardMaterial({color:0xa7aaad,roughness:.85});
+       extraMaterials.push(balconyMat);
+       const depth=Math.min(D*.14,3),balconyWidth=Math.min(W*.55,site.width*.66);
+       mesh(new T.BoxGeometry(balconyWidth,.12,depth),balconyMat,W/2,context.firstLevel+.14,depth/2);
+       const railZ=depth-.10;
+       beam([W/2-balconyWidth/2,context.firstLevel+.18,railZ],
+         [W/2-balconyWidth/2,context.firstLevel+3,railZ],.07,.08,seamMat);
+       beam([W/2+balconyWidth/2,context.firstLevel+.18,railZ],
+         [W/2+balconyWidth/2,context.firstLevel+3,railZ],.07,.08,seamMat);
+       beam([W/2-balconyWidth/2,context.firstLevel+3,railZ],
+         [W/2+balconyWidth/2,context.firstLevel+3,railZ],.07,.08,seamMat);
+     }
+     // Attachment bands communicate possible ELEVATION LEVELS, not physical
+     // anchoring points or permission to connect structural members.
+     if(context.attachmentBands.length){
+       const candidateMat=new T.MeshStandardMaterial({color:0xe4a947,roughness:.45,
+         metalness:.15,transparent:true,opacity:.80});
+       extraMaterials.push(candidateMat);
+       const levels=[...new Set(context.attachmentBands.map(a=>a.level))];
+       for(const level of levels){
+         const y=Math.min(roofElevation-.15,context.firstLevel+(level-1)*context.upperLevel-.20);
+         if(y>0)beam([x0,y,-.20],[x1,y,-.20],.055,.10,candidateMat);
+       }
+     }
+     if(context.pool){
+       const water=new T.MeshStandardMaterial({color:0x258fa6,metalness:.05,
+         roughness:.25,transparent:true,opacity:.75,side:T.DoubleSide});
+       extraMaterials.push(water);
+       const p=context.pool;
+       // Geometry is a 2D placeholder of unknown plan location & dimensions.
+       const g=p.shape==='circular'?new T.CircleGeometry(Math.min(p.width,p.depth)*.50,42)
+         :new T.PlaneGeometry(p.width,p.depth);
+       const pool=mesh(g,water,p.cx,.025,p.cz);
+       pool.rotation.x=-Math.PI/2;
+       if(context.spa){
+         const sp=context.spa;
+         mesh(new T.CylinderGeometry(sp.radius,sp.radius,.08,32),
+           water,sp.cx,.08,sp.cz);
+       }
+     }
    }
    // Project-owned photo is an upright reference plane; its perspective is not geometrically solved.
    if(site.showPhoto && sitePhoto?.url){
      const photoMaterial=new T.MeshBasicMaterial({transparent:true,opacity:.95,side:T.DoubleSide,depthWrite:false,color:0xffffff});
      extraMaterials.push(photoMaterial);
-     const photoPlane=mesh(new T.PlaneGeometry(site.width,Math.max(.1,eaves)),photoMaterial,x0+site.width/2,eaves/2,-.275+.018);
+     const photoPlane=mesh(new T.PlaneGeometry(site.width,Math.max(.1,roofElevation)),photoMaterial,x0+site.width/2,roofElevation/2,-.275+.018);
      photoPlane.renderOrder=3;
      const loader=new T.TextureLoader();
      loader.load(sitePhoto.url,tex=>{
@@ -110,8 +180,8 @@ function mount(host,s,sitePhoto){
      const markerMat=new T.MeshStandardMaterial({color:rec.reviewed?0x48bdb2:0xe4a947,roughness:.7});
      extraMaterials.push(glassMat,markerMat);
      for(const o of rec.openings.slice(0,16)){
-       const aw=Math.max(.05,site.width*o.width),ah=Math.max(.05,eaves*o.height);
-       const ox=x0+site.width*(o.x+o.width/2),oy=eaves*(o.y+o.height/2);
+       const aw=Math.max(.05,site.width*o.width),ah=Math.max(.05,roofElevation*o.height);
+       const ox=x0+site.width*(o.x+o.width/2),oy=roofElevation*(o.y+o.height/2);
        if(o.kind==='column'){
          mesh(new T.BoxGeometry(aw,ah,.13),markerMat,ox,oy,-.19);
        }else{
