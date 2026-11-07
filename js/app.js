@@ -346,8 +346,8 @@
       </section>`).join('');
     if(p.kind==='field'){el.insertAdjacentHTML('afterbegin',`<section class="card field-start"><div class="cap">PASO 2 · FOTOGRAFÍAS</div><h2>Captura la propiedad real</h2><p class="lead">Toma el frente, cada opening, la fascia y el techo. Después toca ✎ Plano en una foto para trazar el dibujo y verificar dimensiones.</p><a class="btn sec block" href="#/p/${p.id}/editor" style="text-decoration:none">Abrir dibujo 2D</a><p class="lead smalltext">Las fotos se guardan aquí una sola vez. AI Vision guarda hallazgos revisables; las dimensiones se verifican en campo.</p></section>`);}
     el.insertAdjacentHTML('afterbegin',visionCard(p));
-    const selection=()=>$('[data-ai-photo]:checked',el).map(x=>x.value);
-    $('[data-ai-photo]',el).forEach(i=>i.onchange=()=>S.visionSelections.set(p.id,selection()));
+    const selection=()=>$$('[data-ai-photo]:checked',el).map(x=>x.value);
+    $$('[data-ai-photo]',el).forEach(i=>i.onchange=()=>S.visionSelections.set(p.id,selection()));
     const tokenField=$('#vision-token',el);
     tokenField.value=S.visionToken||'';
     tokenField.oninput=()=>{S.visionToken=tokenField.value;};
