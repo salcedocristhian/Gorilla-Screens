@@ -80,7 +80,7 @@ export default {
    if(!upstreamURL||!upstreamKey||!visionModel)return fail('Upstream not configured',503,cors);
    let url;
    try{url=new URL(upstreamURL)}catch{return fail('Bad upstream configuration',503,cors);}
-   if(url.protocol!=='https:'||!url.pathname.endsWith('/v1/chat/completions')||url.username||url.password)return fail('Secure HTTPS model endpoint required',503,cors);
+   if(url.protocol!=='https:'||!url.pathname.endsWith('/chat/completions')||url.username||url.password)return fail('Secure HTTPS model endpoint required',503,cors);
    if(Number(req.headers.get('content-length')||0)>MAX_BODY)return fail('Request too large',413,cors);
    let body;
    try{const t=await req.text();if(t.length>MAX_BODY)return fail('Request too large',413,cors);body=JSON.parse(t);}
