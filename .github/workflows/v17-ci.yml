@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/vision-review-integration-20261107
 jobs:
   node-smoke:
     runs-on: ubuntu-latest
