@@ -1,0 +1,58 @@
+name: Gorilla AI Bridge - approved pilot deployment
+
+# Browser-only fallback. This workflow is intentionally scoped to the development
+# branch and requires an explicit repository variable + encrypted Cloudflare secrets.
+# It never deploys Gorilla V17, the existing Gemini pilot Worker, or any other Worker.
+on:
+  push:
+    branches:
+      - feature/one-capture-ai-vision-20261107
+    paths:
+      - .github/workflows/ai-bridge-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gorilla-ai-bridge-pilot-only
+  cancel-in-progress: false
+
+jobs:
+  deploy-bridge:
+    name: Deploy only gorilla-studio-ai-bridge
+    if: github.ref == 'refs/heads/feature/one-capture-ai-vision-20261107'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require explicit deployment approval and private credentials
+        env:
+          APPROVED: ${{ vars.GORILLA_BRIDGE_DEPLOY_APPROVED }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ "$APPROVED" != "YES" ]; then
+            echo "::error::Pilot deployment is NOT approved. Set Actions repository variable GORILLA_BRIDGE_DEPLOY_APPROVED to YES, then re-run this job."
+            exit 1
+          fi
+          if [ -z "$CF_TOKEN" ] || [ -z "$CF_ACCOUNT" ]; then
+            echo "::error::Missing GitHub Actions secrets CLOUDFLARE_API_TOKEN and/or CLOUDFLARE_ACCOUNT_ID. Add these through GitHub Settings, never in code or chats."
+            exit 1
+          fi
+          echo "Authorized to deploy the isolated pilot AI Bridge."
+      - name: Validate bridge code and upload policy
+        run: |
+          node --check cloudflare/gorilla-ai-bridge.mjs
+          node tests/test_vision_bridge.mjs
+          node tests/test_vision_api.mjs
+      - name: Deploy isolated Worker with required rate-limit binding
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4"
+          command: deploy --config cloudflare/wrangler.bridge.json
+      - name: Confirm Worker health after deployment
+        run: |
+          curl -fsS --retry 4 --retry-delay 2 "https://gorilla-studio-ai-bridge.salcedo-cristhian-2020.workers.dev/health" | node -e "let d='';process.stdin.on('data',x=>d+=x);process.stdin.on('end',()=>{const j=JSON.parse(d);if(j.ready!==true){console.error('Bridge is deployed but required secrets/binding are missing (ready=false).');process.exit(1)}console.log('PASS: isolated AI Bridge health ready=true')})"
