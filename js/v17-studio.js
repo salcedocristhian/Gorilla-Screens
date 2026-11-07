@@ -309,12 +309,13 @@ function mount({project,photos,host,save,notify}){
    const detailsWasOpen=host.querySelector('.v17-site-more')?.open===true;
    if(previousPreview){previousPreview.destroy();previousPreview=null;}
    const r=E.takeoff(s);
-   const body={design:()=>design(s,r,project,photos),match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project));
+   const body={design:()=>design(s,r,project,photos),vision:()=>'<div id="v17-vision-experimental"></div>',match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project,photos));
    host.innerHTML='<div class="v17-shell"><header class="v17-heading"><div><div class="cap">GORILLA SCREEN STUDIO · V17 WORKSPACE</div><h1>Design to Purchase</h1><p class="lead">Diseña, presenta, calcula y prepara compras — sin perder el control humano.</p></div><span class="v17-beta">FIELD PILOT</span></header>'+
     '<nav class="v17-nav" aria-label="Studio sections">'+[
-    ['design','▧','Design'],['match','◐','Photo Match'],['docs','▤','Deliverables'],['buy','▦','Takeoff & Order']
+    ['design','▧','Design'],['vision','◉','AI Vision'],['match','◐','Photo Match'],['docs','▤','Deliverables'],['buy','▦','Takeoff & Order']
    ].map(x=>'<button data-v17-tab="'+x[0]+'" '+(active===x[0]?'aria-current="page"':'')+'><span>'+x[1]+'</span>'+x[2]+'</button>').join('')+'</nav>'+body()+'</div>';
    if(detailsWasOpen&&host.querySelector('.v17-site-more'))host.querySelector('.v17-site-more').open=true;
+   if(active==='vision'&&window.GSSVisionExperiment)window.GSSVisionExperiment.render({project,photos,host:host.querySelector('#v17-vision-experimental'),save:store,notify:tell});
    host.querySelectorAll('[data-v17-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.v17Tab;render();});
    host.querySelectorAll('[data-v17-key]').forEach(input=>{
       input.onchange=()=>{

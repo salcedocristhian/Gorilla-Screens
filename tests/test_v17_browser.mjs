@@ -85,6 +85,37 @@ try{
  await page.locator('[data-v17-tab="match"]').click();
  await page.locator('.v17-compare .v17-after').waitFor({timeout:20000});
  await page.screenshot({path:'qa-v17-mobile-photomatch.png',fullPage:true});
+ await page.locator('[data-v17-tab="vision"]').click();
+ await page.getByRole('heading',{name:'Analyze Existing Site'}).waitFor();
+ assert.equal(await page.locator('[data-v17-vision-action="analyze"]').isDisabled(),true,'A router must never be assumed configured');
+ await page.locator('[data-v17-vision-action="prepare"]').click();
+ await page.getByText(/fotografía\(s\) listas para revisar/).waitFor();
+ await page.locator('#v17-vision-experimental details summary').click();
+ await page.locator('[data-v17-gateway]').fill('https://mock-gorilla.example/analyze');
+ await page.locator('[data-v17-save-gateway]').click();
+ await page.locator('[data-v17-vision-action="analyze"]').waitFor({state:'visible'});
+ assert.equal(await page.locator('[data-v17-vision-action="analyze"]').isEnabled(),true);
+ let sentPhotos=0;
+ await page.route('https://mock-gorilla.example/analyze',async route=>{
+   if(route.request().method()==='OPTIONS'){
+     await route.fulfill({status:204,headers:{'access-control-allow-origin':base.replace(/\/$/,''),'access-control-allow-credentials':'true','access-control-allow-headers':'content-type','access-control-allow-methods':'POST, OPTIONS'}});return;
+   }
+   const data=JSON.parse(route.request().postData()||'{}');
+   sentPhotos=data.images?.length||0;
+   await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':base.replace(/\/$/,''),'access-control-allow-credentials':'true'},body:JSON.stringify({
+     status:'DRAFT_REQUIRES_REVIEW',model:'mock-vision-model',
+     analysis:{observations:['House fascia is visible, unmeasured'],possibleFasciaLocations:['rear wall'],openings:[],
+      obstacles:[],measurementsToVerify:['Field-verify house fascia elevation'],limitations:['Not surveyed']}
+   })});
+ });
+ await page.locator('#v17-vision-consent').check();
+ await page.locator('[data-v17-vision-action="analyze"]').click();
+ await page.getByText('Field-verify house fascia elevation').waitFor({timeout:30000});
+ assert.ok(sentPhotos>=1&&sentPhotos<=5,'Only selected project photos are sent with consent');
+ await page.screenshot({path:'qa-v17-mobile-ai-vision.png',fullPage:true});
+ await page.locator('[data-v17-tab="design"]').click();
+ assert.equal(Number(await page.locator('[data-v17-key="height"]').inputValue()),oldHeight+1,'AI draft does not modify verified design values');
+
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+5),true,'No horizontal scrolling on mobile');
  assert.deepEqual(pageErrors,[],'No browser JavaScript errors: '+JSON.stringify(pageErrors));
  console.log('PASS V17 mobile: navigation, WebGL, plans PDF, CSV, purchase approval, invalidation, real before/after photos');
