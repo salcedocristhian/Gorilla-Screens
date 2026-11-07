@@ -345,7 +345,7 @@
     };
     const visionImport=$('[data-a="vision-import"]',el);
     if(visionImport)visionImport.onclick=async()=>{
-      const selected=$('[data-ai-photo]:checked',el).map(x=>x.value);
+      const selected=$$('[data-ai-photo]:checked',el).map(x=>x.value);
       if(!selected.length){toast(S.photos.length?'Marca las fotos de este proyecto utilizadas en Gemini.':'Primero sube las fotografías de esta propiedad más abajo.',6000);return;}
       if(!$('#vision-authorized',el)?.checked){toast('Confirma autorización y propiedad antes de guardar el análisis.',5000);return;}
       const raw=$('#vision-json',el)?.value||'';
