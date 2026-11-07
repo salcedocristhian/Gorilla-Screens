@@ -156,6 +156,10 @@
       // Project-specific V17 context images must follow the imported project's new photo IDs.
       // Never let a photo reference resolve against another customer's IndexedDB record.
       if(p.studioV17?.site?.photoId)p.studioV17.site.photoId=idMap[p.studioV17.site.photoId]||'';
+      if(Array.isArray(p.studioV17?.site?.reconstruction?.sourcePhotoIds)){
+        p.studioV17.site.reconstruction.sourcePhotoIds=p.studioV17.site.reconstruction.sourcePhotoIds.map(id=>idMap[id]).filter(Boolean);
+        if(!p.studioV17.site.reconstruction.sourcePhotoIds.length)p.studioV17.site.reconstruction=null;
+      }
       if(p.studioV17?.match?.before)p.studioV17.match.before=idMap[p.studioV17.match.before]||'';
       if(p.studioV17?.match?.after)p.studioV17.match.after=idMap[p.studioV17.match.after]||'';
 
