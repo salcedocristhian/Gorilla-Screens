@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/v17-design-to-purchase-studio
+      - feature/one-capture-ai-vision-20261107
   pull_request:
     branches:
       - main
@@ -18,12 +19,18 @@ jobs:
             echo "Checking $f"
             node --check "$f"
           done
+      - name: Syntax check for isolated AI Bridge Worker
+        run: node --check cloudflare/gorilla-ai-bridge.mjs
       - name: Original model regression
         run: node tests/test_model.mjs
       - name: V17 geometry and procurement invariants
         run: node tests/test_v17.mjs
       - name: AI Vision project isolation and JSON contract
         run: node tests/test_vision.mjs
+      - name: Single-capture API client
+        run: node tests/test_vision_api.mjs
+      - name: Authenticated Gemini bridge security
+        run: node tests/test_vision_bridge.mjs
 
   browser-smoke:
     runs-on: ubuntu-24.04
@@ -43,6 +50,8 @@ jobs:
         run: node tests/test_v17_browser.mjs
       - name: Two-house AI Vision mobile browser regression
         run: node tests/test_ai_browser.mjs
+      - name: Single capture mobile browser regression
+        run: node tests/test_one_capture_browser.mjs
       - name: Save QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -50,4 +59,5 @@ jobs:
           name: v17-mobile-qa
           path: |
             qa-v17-mobile-*.png
+            qa-onecapture-*.png
           if-no-files-found: ignore
