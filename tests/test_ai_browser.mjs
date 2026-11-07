@@ -17,6 +17,7 @@ async function addPhoto(category){
 async function start(){
   await page.goto(base);
   await page.locator('[data-a="newphoto"]').click();
+  await page.locator('.tabbar a[href$="/fotos"]').click();
   await page.locator('#vision-json').waitFor();
   return page.url().split('#/p/')[1].split('/')[0];
 }
@@ -50,6 +51,7 @@ try{
   await importResult('arches',3,false);
   await page.locator('.topbar a[aria-label="Volver a proyectos"]').click();
   await page.locator('[data-a="newphoto"]').click();
+  await page.locator('.tabbar a[href$="/fotos"]').click();
   await page.locator('#vision-json').waitFor();
   const idB=page.url().split('#/p/')[1].split('/')[0];
   assert.notEqual(idA,idB);
