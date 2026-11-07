@@ -6,15 +6,12 @@ const base='http://127.0.0.1:8765/';
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},acceptDownloads:true});
 const errors=[];
-const pageErrors=errors;
 page.on('pageerror',err=>errors.push(err.message));
 const icon=fs.readFileSync(new URL('../assets/icon-192.png',import.meta.url));
 const fixture=(name)=>({name,mimeType:'image/png',buffer:icon});
 async function addPhoto(category){
   const before=await page.locator('[data-ai-photo]').count();
   await page.locator('input[data-cat="'+category+'"]').setInputFiles(fixture(category+'.png'));
-  await page.waitForTimeout(700);
-  console.log('LEGACY PHOTO DEBUG',JSON.stringify({category,before,checked:await page.locator('[data-ai-photo]').count(),toast:await page.locator('#toast').innerText(),errors:pageErrors,errorCount:pageErrors.length}));
   await page.waitForFunction(expected=>document.querySelectorAll('[data-ai-photo]').length===expected,before+1);
 }
 async function start(){
