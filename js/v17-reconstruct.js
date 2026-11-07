@@ -37,10 +37,35 @@ function parse(input){
     width:clamp(coords[2],0,1),height:clamp(coords[3],0,1),
     evidence:str(item.evidence,220),confidence:['low','medium','high'].includes(item.confidence)?item.confidence:'low'};
  }).filter(Boolean);
+ const certainty=v=>['low','medium','high'].includes(v)?v:'low';
+ const flag=v=>typeof v==='boolean'?v:null;
+ const stories=Number.isInteger(schema.stories)&&schema.stories>=1&&schema.stories<=3?schema.stories:null;
+ const poolShape=['rectangular','freeform','circular','other','unknown'].includes(schema.poolShape)?schema.poolShape:'unknown';
+ const deckSurface=['pavers','concrete','tile','wood','other','unknown'].includes(schema.deckSurface)?schema.deckSurface:'unknown';
+ const missingViews=strings(schema.recommendedCaptureMissingViews,10);
+ const evidence=(value)=>Array.isArray(value)?[...new Set(value)]
+  .filter(i=>Number.isInteger(i)&&i>=1&&i<=5).slice(0,5):[];
+ const walls=Array.isArray(schema.candidateAttachmentWalls)?schema.candidateAttachmentWalls.slice(0,8)
+  .map((a,i)=>({id:str(a?.id||'wall-'+(i+1),60),
+   level:Number.isInteger(a?.level)&&a.level>=1&&a.level<=3?a.level:null,
+   visibleMaterial:str(a?.visibleMaterial||'unknown',80),
+   observation:str(a?.observation,240),confidence:certainty(a?.confidence),
+   evidencePhotoIndices:evidence(a?.evidencePhotoIndices),structuralSuitability:'unverified'}))
+  .filter(a=>a.observation):[];
+ const upperZones=Array.isArray(schema.upperAttachmentZones)?schema.upperAttachmentZones.slice(0,8)
+  .map((a,i)=>({id:str(a?.id||'upper-'+(i+1),60),
+   level:Number.isInteger(a?.level)&&a.level>=1&&a.level<=3?a.level:null,
+   description:str(a?.description,240),confidence:certainty(a?.confidence),
+   evidencePhotoIndices:evidence(a?.evidencePhotoIndices),structuralSuitability:'unverified'}))
+  .filter(a=>a.description):[];
  if(!features.length&&!fascia.length&&!obstacles.length&&!comments.length&&!toVerify.length&&!openings.length){
    throw Error('Gemini returned no useful visible observations.');
  }
- return {schemaVersion:1,kind:'existing-site-visual-reference',roofType,
+ return {schemaVersion:2,kind:'existing-site-visual-reference',roofType,
+  stories,coveredPatio:flag(schema.coveredPatio),poolPresent:flag(schema.poolPresent),
+  spaPresent:flag(schema.spaPresent),balconyPresent:flag(schema.balconyPresent),
+  poolShape,deckSurface,contextConfidence:certainty(schema.contextConfidence),
+  attachments:walls,upperZones,missingViews,
   openings,features,fascia,obstacles,limitations,toVerify,comments,
   modelName:str(raw.model||raw.meta?.servedModel||'Gemini',80),
   sourceCount:Number.isFinite(Number(schema.photoCount))?Math.min(5,Math.max(1,Number(schema.photoCount))):null,
@@ -76,9 +101,37 @@ function approveAsReference(s){
  r.reviewedAt=new Date().toISOString();
  return r;
 }
+// Visual-only 3D primitive plan from observed site features.
+// All spatial dimensions are PROVISIONAL display proportions based on enclosure
+// values already entered by the seller. Nothing here is used for takeoff.
+function contextLayout(s){
+ const E=window.GSSV17Engine;
+ const site=E.siteLayout(s),r=s.site?.reconstruction||{};
+ const stories=Number.isInteger(r.stories)?clamp(r.stories,1,3):1;
+ const firstLevel=site.fascia;
+ const upperLevel=Math.max(5,firstLevel*.75);
+ const houseHeight=firstLevel+(stories-1)*upperLevel;
+ const W=Math.max(0,Number(s.width)||0),D=Math.max(0,Number(s.depth)||0);
+ const pool=r.poolPresent===true&&W>0&&D>0?{
+  // Schematic position INSIDE the proposed enclosure as a visual cue only.
+  // It is NOT a pool location recovered from the photo.
+  cx:W*.52,cz:D*.64,width:W*.58,depth:D*.38,shape:r.poolShape||'unknown'
+ }:null;
+ const spa=r.spaPresent===true&&pool?{
+  cx:Math.min(W*.84,pool.cx+pool.width*.36),
+  cz:Math.min(D*.91,pool.cz+pool.depth*.26),
+  radius:Math.min(W,D)*.105
+ }:null;
+ return {stories,firstLevel,upperLevel,houseHeight,houseRoofType:r.roofType||'unknown',
+  pool,spa,coveredPatio:r.coveredPatio===true,balcony:r.balconyPresent===true,
+  attachmentBands:[...(r.attachments||[]),...(r.upperZones||[])].slice(0,12)
+   .map(a=>({level:Number.isInteger(a.level)?clamp(a.level,1,stories):null,
+    confidence:a.confidence||'low'})).filter(a=>a.level!==null),
+  estimated:true,sourceCount:r.sourceCount||null};
+}
 function formatStatus(s){
  const r=s.site?.reconstruction;
  return !r?'NONE':r.reviewed?'REVIEWED_VISUAL_ONLY':'DRAFT_REVIEW_REQUIRED';
 }
-window.GSSReconstruction={parse,apply,approveAsReference,formatStatus};
+window.GSSReconstruction={parse,apply,approveAsReference,formatStatus,contextLayout};
 })();
