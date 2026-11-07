@@ -22,6 +22,8 @@ jobs:
         run: node tests/test_model.mjs
       - name: V17 geometry and procurement invariants
         run: node tests/test_v17.mjs
+      - name: V17 Gemini site reconstruction and isolation
+        run: node tests/test_v17_reconstruct.mjs
 
   browser-smoke:
     runs-on: ubuntu-24.04
