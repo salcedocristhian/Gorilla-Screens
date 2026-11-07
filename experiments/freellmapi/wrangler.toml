@@ -1,0 +1,5 @@
+# Experimental only. Publish behind a Cloudflare Access application.
+name = "gorilla-ai-vision-experiment"
+main = "cloudflare-worker.mjs"
+compatibility_date = "2026-11-07"
+workers_dev = false
