@@ -74,9 +74,12 @@ export default {
    if(req.method==='OPTIONS'&&pathname==='/analyze')return new Response(null,{status:204,headers:cors});
    if(pathname!=='/analyze'||req.method!=='POST')return fail('Not found',404,cors);
    if(!await authorized(req,env))return fail('Cloudflare Access authorization required',401,cors);
-   if(!env.FREELLMAPI_URL||!env.FREELLMAPI_API_KEY||!env.FREELLMAPI_MODEL)return fail('Upstream not configured',503,cors);
+   const upstreamURL=env.VISION_UPSTREAM_URL||env.FREELLMAPI_URL;
+   const upstreamKey=env.VISION_UPSTREAM_KEY||env.FREELLMAPI_API_KEY;
+   const visionModel=env.VISION_MODEL||env.FREELLMAPI_MODEL;
+   if(!upstreamURL||!upstreamKey||!visionModel)return fail('Upstream not configured',503,cors);
    let url;
-   try{url=new URL(env.FREELLMAPI_URL)}catch{return fail('Bad upstream configuration',503,cors);}
+   try{url=new URL(upstreamURL)}catch{return fail('Bad upstream configuration',503,cors);}
    if(url.protocol!=='https:'||!url.pathname.endsWith('/v1/chat/completions')||url.username||url.password)return fail('Secure HTTPS model endpoint required',503,cors);
    if(Number(req.headers.get('content-length')||0)>MAX_BODY)return fail('Request too large',413,cors);
    let body;
