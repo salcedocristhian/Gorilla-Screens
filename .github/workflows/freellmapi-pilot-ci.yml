@@ -1,0 +1,29 @@
+name: Gorilla FreeLLMAPI Private Pilot CI
+
+on:
+  push:
+    branches:
+      - experiment/freellmapi-vision-pilot
+  pull_request:
+    branches:
+      - main
+    paths:
+      - experiments/freellmapi/**
+      - tests/test_freellmapi.mjs
+      - .github/workflows/freellmapi-pilot-ci.yml
+
+jobs:
+  local-vision-mock:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify pilot code syntax
+        run: |
+          node --check experiments/freellmapi/server.mjs
+          node --check experiments/freellmapi/pilot.js
+          node --check tests/test_freellmapi.mjs
+      - name: Mock FreeLLMAPI vision and test privacy safeguards
+        run: node tests/test_freellmapi.mjs
+      - name: Original Gorilla V17 regression
+        run: node tests/test_v17.mjs
