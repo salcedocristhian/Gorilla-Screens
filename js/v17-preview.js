@@ -9,6 +9,8 @@ function mount(host,s,sitePhoto){
  const site=window.GSSV17Engine.siteLayout(s);
  host.dataset.houseReference=site.enabled?'true':'false';
  host.dataset.photoReference=site.enabled&&sitePhoto?.url?String(sitePhoto.id):'';
+ host.dataset.aiOpenings=String(s.site?.reconstruction?.openings?.length||0);
+ host.dataset.aiReviewed=String(s.site?.reconstruction?.reviewed===true);
  if(!(W>0&&D>0&&H>0))return {destroy(){}};
  const color=s.finish==='white'?0xe9ece9:0x3d3028;
  const renderer=new T.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
@@ -96,6 +98,30 @@ function mount(host,s,sitePhoto){
        tex.encoding=T.sRGBEncoding;
        photoMaterial.map=tex;photoMaterial.needsUpdate=true;textures.push(tex);
      },undefined,()=>{/* Keep neutral house if the source photo cannot be decoded. */});
+   }
+   // The AI's explicitly normalized facade annotations are visual OVERLAYS,
+   // not cut-outs or surveyed geometry. No guessed locations from prose.
+   const rec=s.site?.reconstruction;
+   if(Array.isArray(rec?.openings)&&rec.openings.length){
+     const glassMat=new T.MeshStandardMaterial({
+       color:0x244d65,roughness:.3,metalness:.15,transparent:true,opacity:.80,
+       side:T.DoubleSide,depthWrite:false
+     });
+     const markerMat=new T.MeshStandardMaterial({color:rec.reviewed?0x48bdb2:0xe4a947,roughness:.7});
+     extraMaterials.push(glassMat,markerMat);
+     for(const o of rec.openings.slice(0,16)){
+       const aw=Math.max(.05,site.width*o.width),ah=Math.max(.05,eaves*o.height);
+       const ox=x0+site.width*(o.x+o.width/2),oy=eaves*(o.y+o.height/2);
+       if(o.kind==='column'){
+         mesh(new T.BoxGeometry(aw,ah,.13),markerMat,ox,oy,-.19);
+       }else{
+         mesh(new T.BoxGeometry(aw,ah,.025),glassMat,ox,oy,-.16);
+         beam([ox-aw/2,oy-ah/2,-.13],[ox-aw/2,oy+ah/2,-.13],.045,.055,markerMat);
+         beam([ox+aw/2,oy-ah/2,-.13],[ox+aw/2,oy+ah/2,-.13],.045,.055,markerMat);
+         beam([ox-aw/2,oy+ah/2,-.13],[ox+aw/2,oy+ah/2,-.13],.045,.055,markerMat);
+         beam([ox-aw/2,oy-ah/2,-.13],[ox+aw/2,oy-ah/2,-.13],.045,.055,markerMat);
+       }
+     }
    }
    // Existing fascia reference (not the proposed super gutter).
    const fasciaMat=new T.MeshStandardMaterial({color:0x318d92,metalness:.3,roughness:.45});
