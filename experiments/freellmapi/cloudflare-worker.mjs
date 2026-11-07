@@ -100,7 +100,7 @@ export default {
      const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),55000);
      let result;
      try{result=await fetch(url.toString(),{
-        method:'POST',headers:{'authorization':'Bearer '+env.FREELLMAPI_API_KEY,'content-type':'application/json'},
+        method:'POST',headers:{'authorization':'Bearer '+env.FREELLMAPI_API_KEY,'content-type':'application/json',...(env.UPSTREAM_ACCESS_CLIENT_ID&&env.UPSTREAM_ACCESS_CLIENT_SECRET?{'CF-Access-Client-Id':env.UPSTREAM_ACCESS_CLIENT_ID,'CF-Access-Client-Secret':env.UPSTREAM_ACCESS_CLIENT_SECRET}:{})},
         body:JSON.stringify({model:env.FREELLMAPI_MODEL,stream:false,temperature:0.1,max_tokens:1500,
           messages:[{role:'user',content:[{type:'text',text:prompt},...body.images.map(x=>({type:'image_url',image_url:{url:x}}))]}]}),
         signal:ctl.signal,
