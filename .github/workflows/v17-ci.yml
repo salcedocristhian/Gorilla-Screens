@@ -85,3 +85,13 @@ jobs:
           name: gorilla-v17-one-capture-static
           path: gorilla-v17-one-capture-static.zip
           if-no-files-found: error
+      - name: Package separate AI Bridge Worker source
+        run: |
+          cd cloudflare
+          zip -q "$GITHUB_WORKSPACE/gorilla-ai-bridge-worker.zip" gorilla-ai-bridge.mjs wrangler.bridge.json
+      - name: Upload gated Worker bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: gorilla-ai-bridge-worker
+          path: gorilla-ai-bridge-worker.zip
+          if-no-files-found: error
