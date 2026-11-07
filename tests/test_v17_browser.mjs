@@ -75,6 +75,7 @@ try{
  await page.locator('[data-v17-action="ai-import"]').click();
  await page.getByText('Resultado DRAFT_REVIEW_REQUIRED').waitFor({timeout:20000});
  assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-openings'),'0','Do not fabricate openings from free-form vision prose');
+ page.once('dialog',async dialog=>dialog.accept());
  await page.locator('[data-v17-action="ai-review"]').click();
  await page.getByText('Resultado REVIEWED_VISUAL_ONLY').waitFor({timeout:20000});
  assert.equal(await page.locator('#v17-preview').getAttribute('data-ai-reviewed'),'true');
