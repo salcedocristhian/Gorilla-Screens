@@ -34,8 +34,8 @@ function visionReviewPanel(p,photos){
 }
 function siteReference(s,photos,p){
  const site=E.siteLayout(s),raw=s.site||{},photo=photos.find(x=>x.id===site.photoId);
- const available=photos.filter(x=>['porche','frente','street','detalles','aerea','openings','render'].includes(x.cat));
- const photoOptions=[['','Choose a project photo'],...available.map(x=>[x.id,({porche:'Patio / interior',frente:'Facade',street:'Street',detalles:'Fascia / detail',aerea:'Aerial',openings:'Opening',render:'Render reference'}[x.cat]||x.cat)+' · '+new Date(x.createdAt).toLocaleDateString('en-US')])];
+ const available=photos.filter(x=>['porche','frente','west','east','south','street','detalles','aerea','openings','render'].includes(x.cat));
+ const photoOptions=[['','Choose a project photo'],...available.map(x=>[x.id,({porche:'Patio / interior',frente:'Facade',west:'West',east:'East',south:'South / Rear',street:'Street',detalles:'Fascia / detail',aerea:'Aerial',openings:'Opening',render:'Render reference'}[x.cat]||x.cat)+' · '+new Date(x.createdAt).toLocaleDateString('en-US')])];
  const refStatus=site.estimated?'Reference dimensions estimated':'Field dimensions marked verified';
  const delta=(site.delta!==null&&Math.abs(site.delta)>.12)?
   '<div class="v17-note v17-attach-warning"><strong>Fascia connection mismatch: '+Math.abs(site.delta).toFixed(2)+' ft.</strong> Proposed enclosure height and existing fascia are different. Verify the actual attachment before releasing plans or purchasing.</div>':'';
