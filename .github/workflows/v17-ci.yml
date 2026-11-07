@@ -62,3 +62,25 @@ jobs:
             qa-v17-mobile-*.png
             qa-onecapture-*.png
           if-no-files-found: ignore
+
+  package-static-preview:
+    name: package-static-preview
+    runs-on: ubuntu-latest
+    needs: [node-smoke, browser-smoke]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package exactly the public frontend files
+        run: |
+          mkdir -p /tmp/gorilla-static
+          cp index.html sw.js manifest.webmanifest robots.txt _headers /tmp/gorilla-static/
+          cp -R assets css js /tmp/gorilla-static/
+          test -f /tmp/gorilla-static/index.html
+          test -f /tmp/gorilla-static/js/vision-api.js
+          cd /tmp/gorilla-static
+          zip -qr "$GITHUB_WORKSPACE/gorilla-v17-one-capture-static.zip" .
+      - name: Upload tested Cloudflare static ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: gorilla-v17-one-capture-static
+          path: gorilla-v17-one-capture-static.zip
+          if-no-files-found: error
