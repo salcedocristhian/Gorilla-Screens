@@ -120,3 +120,10 @@
 .v17-ai-results p{margin:7px 0;color:var(--sub);line-height:1.5}
 .v17-ai-results .v17-ai-warning{color:var(--text)}
 @media(max-width:520px){.v17-ai-photos{grid-template-columns:1fr}.v17-ai-panel{padding:12px}.v17-ai-panel .v17-site-header{align-items:flex-start}}
+
+/* AI Site Geometry V2 metadata — responsive and obviously provisional. */
+.v17-ai-geometry-metadata{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:12px 0}
+.v17-ai-geometry-metadata>div{padding:9px 7px;border:1px solid var(--line);border-radius:9px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.v17-ai-geometry-metadata small{color:var(--sub);font-size:10px}
+.v17-ai-geometry-metadata strong{font-size:12px;overflow-wrap:anywhere}
+@media(max-width:620px){.v17-ai-geometry-metadata{grid-template-columns:repeat(2,minmax(0,1fr))}}
