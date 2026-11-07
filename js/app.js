@@ -22,6 +22,9 @@
     ['aerea', 'Vista aérea', 'Imagen aérea autorizada o fotografía propia. Se muestra en el plano de ubicación.'],
     ['street', 'Vista desde la calle', 'Fotografía propia o referencia con derechos de uso.'],
     ['frente', 'Frente de la casa', 'Foto completa del frente, de esquina a esquina.'],
+    ['west', 'West / elevación izquierda', 'Vista completa del lado oeste o izquierdo, tomada desde el exterior.'],
+    ['east', 'East / elevación derecha', 'Vista completa del lado este o derecho, tomada desde el exterior.'],
+    ['south', 'South / elevación posterior', 'Vista completa de la fachada posterior, patio y conexión a la casa.'],
     ['openings', 'Cada opening', 'Una foto de frente por opening, con la cinta métrica visible si puedes.'],
     ['porche', 'Porche / interior', 'Desde adentro, mirando a los lados: puerta, ventana, luz, piso.'],
     ['detalles', 'Fascia, gutters y downspout', 'Fascia, gutters existentes, downspout y techo.'],
@@ -86,8 +89,10 @@
   function parkViewer() { if (S.viewer) S.viewer.mount($('#offscreen')); }
 
   // ---------- router
+  let routeGeneration=0;
   window.addEventListener('hashchange', route);
   async function route() {
+    const generation=++routeGeneration;
     const h = location.hash.replace(/^#\/?/, '');
     const parts = h.split('/');
     parkViewer();
@@ -95,15 +100,23 @@
     if (parts[0] === 'p' && parts[1]) {
       if (!S.project || S.project.id !== parts[1]) {
         const p = await St.getProject(parts[1]);
+        if (generation!==routeGeneration) return;
         if (!p) { location.hash = '#/'; return; }
-        S.project = Mo.normalize(p); S.builtFor = ''; S.view='frente'; S.after=true; await loadPhotos();
+        S.project = Mo.normalize(p); S.builtFor = ''; S.view='frente'; S.after=true; await loadPhotos(p.id);
+        if (generation!==routeGeneration) return;
       }
       return projectView(parts[2] || 'datos');
     }
     if (parts[0] === 'ajustes') return settingsView();
     return homeView();
   }
-  async function loadPhotos() { S.photos.forEach(p => p.url && URL.revokeObjectURL(p.url)); S.photos = (await St.listPhotos(S.project.id)).map(p => Object.assign(p, { url: URL.createObjectURL(p.blob) })); }
+  async function loadPhotos(projectId=S.project?.id) {
+    if (!projectId) return;
+    const records=await St.listPhotos(projectId);
+    if (S.project?.id!==projectId) return;
+    S.photos.forEach(p=>p.url&&URL.revokeObjectURL(p.url));
+    S.photos=records.map(p=>Object.assign(p,{url:URL.createObjectURL(p.blob)}));
+  }
 
   function topbar(title, subtitle, left, right) {
     return `<header class="topbar">${left || `<img src="${LOGO}" alt="Gorilla Screening Solutions">`}<div class="t"><b>${esc(title)}</b>${subtitle ? `<span>${esc(subtitle)}</span>` : ''}</div>${right || ''}</header>`;
@@ -302,6 +315,7 @@
       '<div class="field"><label for="vision-json">Pegar JSON completo de Gemini</label><textarea id="vision-json" rows="5" placeholder="Pega aquí el JSON copiado desde el piloto"></textarea></div>'+
       '<p class="lead smalltext">Selecciona exactamente las fotografías usadas en ese análisis (máximo cinco). El conteo se valida contra el JSON.</p>'+
       '<div style="max-height:210px;overflow:auto">'+S.photos.map(ph=>'<label style="display:flex;align-items:center;gap:10px;padding:8px 0"><input type="checkbox" data-ai-photo value="'+esc(ph.id)+'" '+(a?.photoIds?.includes(ph.id)?'checked':'')+'><span>'+esc(ph.cat)+' · '+new Date(ph.createdAt).toLocaleDateString('en-US')+'</span></label>').join('')+'</div>'+
+      '<label style="display:flex;align-items:flex-start;gap:9px;padding:9px 0"><input id="vision-authorized" type="checkbox"><span>Confirmo que las fotos corresponden a esta propiedad y tengo autorización para analizar sus imágenes.</span></label>'+ 
       '<button class="btn block" data-a="vision-import">Guardar análisis en este proyecto</button>'+result+'</section>';
   }
 
@@ -320,7 +334,8 @@
     el.insertAdjacentHTML('afterbegin',visionCard(p));
     const visionImport=$('[data-a="vision-import"]',el);
     if(visionImport)visionImport.onclick=async()=>{
-      const selected=$('[data-ai-photo]:checked',el).map(x=>x.value);
+      const selected=$$('[data-ai-photo]:checked',el).map(x=>x.value);
+      if(!$('#vision-authorized',el)?.checked){toast('Confirma autorización y propiedad antes de guardar el análisis.',5000);return;}
       const raw=$('#vision-json',el)?.value||'';
       try{
         if(!window.GSSVision)throw Error('Módulo AI Vision no disponible.');
@@ -333,10 +348,11 @@
         tabFotos(el);
       }catch(err){toast(err.message||'No se pudo guardar el análisis.',6000);}
     };
-    $('input[data-cat]', el).forEach(i => i.onchange = async () => {
+    $$('input[data-cat]', el).forEach(i => i.onchange = async () => {
       const files = [...i.files]; if (!files.length) return; toast('Guardando ' + files.length + ' foto(s)…');
-      for (const f of files) { try { const b = await resizeImage(f, 1600); await St.savePhoto({ id: Mo.uid(), projectId: S.project.id, cat: i.dataset.cat, blob: b, createdAt: Date.now() }); } catch (e) { toast('Una foto no se pudo leer'); } }
-      await loadPhotos(); tabFotos(el);
+      for (const f of files) { try { const b = await resizeImage(f, 1600); await St.savePhoto({ id: Mo.uid(), projectId: p.id, cat: i.dataset.cat, blob: b, createdAt: Date.now() }); } catch (e) { toast('Una foto no se pudo leer'); } }
+      if(S.project?.id!==p.id)return;
+      await loadPhotos(p.id); if(S.project?.id===p.id)tabFotos(el);
     });
     $$('[data-del]', el).forEach(b => b.onclick = async () => {const phid=b.dataset.del;if(S.project.approvedDrawing?.photoId===phid){alert('Esta foto es la referencia de un plano aprobado. Para retirarla, genera primero una nueva revisión con otra fotografía.');return;}if(!confirm('¿Eliminar esta fotografía del proyecto?'))return;if(S.project.drawingDraft?.sourcePhotoId===phid){S.project.drawingDraft.sourcePhotoId='';saveSoon();}await St.deletePhoto(phid);await loadPhotos();tabFotos(el);});
     $$('[data-trace]',el).forEach(b=>b.onclick=()=>{window.GSSPhotoEditor.initDraft(S.project).sourcePhotoId=b.dataset.trace;saveSoon();location.hash='#/p/'+S.project.id+'/editor';});
