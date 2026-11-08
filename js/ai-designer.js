@@ -33,10 +33,23 @@ function evidence(p,photos){
   missingViews:valid?g.recommendedCaptureMissingViews?.slice(0,5)||[]:[]
  };
 }
+function recommendedPhotos(projectId,photos){
+ const preferred=['frente','site','west','east','detalles','porche','street','aerea'];
+ const rows=(Array.isArray(photos)?photos:[]).filter(x=>x.projectId===projectId&&x.id&&
+   !['render'].includes(x.cat));
+ const aerial=rows.find(x=>x.cat==='aerea');
+ const site=rows.filter(x=>x.cat!=='aerea').sort((a,b)=>
+    preferred.indexOf(a.cat)<preferred.indexOf(b.cat)?-1:
+    preferred.indexOf(a.cat)>preferred.indexOf(b.cat)?1:0);
+ const chosen=site.slice(0,aerial?4:5);
+ if(aerial)chosen.push(aerial);
+ return chosen.map(x=>x.id);
+}
 function initial(p,photos){
  const ev=evidence(p,photos);
  const kind=['porch','pool','lanai','repair'].includes(p.fieldType)?p.fieldType:null;
  return {version:1,projectId:p.id,evidencePhotoIds:ev.photoIds,
+  reportKey:ev.valid?Number(p.aiVision.importedAt)||0:0,
   projectType:kind,answers:{},reviewed:false,startedAt:Date.now(),updatedAt:Date.now()};
 }
 function get(p,photos){
@@ -44,7 +57,8 @@ function get(p,photos){
  const stored=p.aiDesigner;
  if(!stored||stored.projectId!==p.id||stored.version!==1||
    !Array.isArray(stored.evidencePhotoIds)||
-   stored.evidencePhotoIds.join('|')!==ev.photoIds.join('|')){
+   stored.evidencePhotoIds.join('|')!==ev.photoIds.join('|')||
+   stored.reportKey!==(ev.valid?Number(p.aiVision.importedAt)||0:0)){
     p.aiDesigner=initial(p,photos);
  }
  return p.aiDesigner;
@@ -201,5 +215,5 @@ function render({project,photos,host,save,navigate,notify}){
    p.aiDesigner.reviewed=true;save();navigate('medidas');
  });
 }
-window.GSSAiDesigner={evidence,initial,get,questionSet,next,answer,back,summary,render};
+window.GSSAiDesigner={evidence,recommendedPhotos,initial,get,questionSet,next,answer,back,summary,render};
 })();
