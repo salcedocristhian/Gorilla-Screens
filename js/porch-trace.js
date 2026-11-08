@@ -156,7 +156,6 @@ function mount({project,photos,host,save,notify}){
     const stop=()=>{if(!dragging)return;dragging=null;persist();render();};
     svg.onpointerup=stop;svg.onpointercancel=stop;svg.onlostpointercapture=stop;
   }
- }
  if(draft&&draft.arches.length&&window.GSSPorchInfill3D){
    preview3d=window.GSSPorchInfill3D.mount({host:host.querySelector('#v17-porch-infill-3d'),project,photos:owned});
  }
