@@ -9,6 +9,7 @@ on:
       - feature/porch-infill-3d-concept-20261107
       - feature/porch-photo-alignment-qa-20261107
       - feature/field-studio-ios-ux-20261107
+      - feature/ai-designer-conversation-v1-20261107
   pull_request:
     branches:
       - main
@@ -41,6 +42,8 @@ jobs:
         run: node tests/test_porch_alignment.mjs
       - name: Gorilla Field Studio iPhone journey, real brand and deliverable invariants
         run: node tests/test_field_studio_ui.mjs
+      - name: AI Designer questions, separate house context and product, measurement safety
+        run: node tests/test_ai_designer.mjs
       - name: Single-capture API client
         run: node tests/test_vision_api.mjs
       - name: Authenticated Gemini bridge security
@@ -74,6 +77,8 @@ jobs:
         run: node tests/test_porch_alignment_browser.mjs
       - name: Gorilla Field Studio seven-screen iPhone journey and regression
         run: node tests/test_field_studio_browser.mjs
+      - name: Gorilla AI Designer iPhone conversation and project persistence regression
+        run: node tests/test_ai_designer_browser.mjs
       - name: Save QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -86,6 +91,7 @@ jobs:
             qa-v17-porch-infill-*.png
             qa-porch-photo-match-*.png
             qa-field-studio-*.png
+            qa-ai-designer-*.png
           if-no-files-found: ignore
 
   package-static-preview:
