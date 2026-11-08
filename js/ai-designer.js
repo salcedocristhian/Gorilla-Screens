@@ -167,6 +167,30 @@ function summary(p,photos){
    'No quantities or prices until geometry and field measurements are reviewed']
  };
 }
+function approveIntent(p,photos){
+ const plan=summary(p,photos);
+ if(!plan.complete)throw Error('Termina la conversación antes de confirmar el alcance.');
+ const session=get(p,photos);
+ session.reviewed=true;session.updatedAt=Date.now();
+ // Import only direct seller CHOICES, never inferred structure, prices or dimensions.
+ // Do not overwrite existing signed/approved or demo geometry.
+ if(p.kind==='field' && !p.approvedDrawing && !p.studioV17?.approvedOrder){
+   const finish=plan.product.finish,mesh=plan.product.mesh;
+   p.frameColor=finish==='bronze'?'bronze':'white';
+   p.mesh=mesh==='standard'?'18×14 fiberglass charcoal':
+      mesh==='no-see-um'?'No-See-Um':mesh==='pet'?'Pet Screen':'Privacy Screen';
+   if(!p.studioV17)p.studioV17={};
+   p.studioV17.finish=p.frameColor;
+   p.studioV17.mesh=mesh==='standard'?'Standard 18x14 fiberglass':
+      mesh==='no-see-um'?'No-See-Um':mesh==='pet'?'Pet Screen':'Privacy Screen';
+   if(['pool','lanai'].includes(plan.kind)&&['mansard','flat','gable'].includes(plan.product.roof)){
+     p.studioV17.roof=plan.product.roof;
+   }
+   if(plan.product.doorLocation==='none')p.studioV17.doorCount=0;
+   p.studioV17.verified=false;
+ }
+ return plan;
+}
 function escOpts(choices,current){
  return choices.map(o=>'<button type="button" class="ad-choice '+(current===o.id?'chosen':'')+
   '" data-ad-answer="'+enc(o.id)+'">'+enc(o.label)+'<span aria-hidden="true">›</span></button>').join('');
@@ -212,8 +236,8 @@ function render({project,photos,host,save,navigate,notify}){
  });
  host.querySelector('[data-ad-continue]')?.addEventListener('click',()=>{
    if(!sum.complete)return;
-   p.aiDesigner.reviewed=true;save();navigate('medidas');
+   try{approveIntent(p,photos);save();navigate('medidas');}catch(err){notify?.(err.message);}
  });
 }
-window.GSSAiDesigner={evidence,recommendedPhotos,initial,get,questionSet,next,answer,back,summary,render};
+window.GSSAiDesigner={evidence,recommendedPhotos,initial,get,questionSet,next,answer,back,summary,approveIntent,render};
 })();
