@@ -12,7 +12,7 @@ function fromTrace(project,photos){
  if(!photo)return null;
  const arches=trace.arches.filter(a=>a.right>a.left&&a.top<a.spring&&a.spring<a.bottom).map(a=>({
    id:a.id,label:a.label,left:a.left,right:a.right,top:a.top,spring:a.spring,bottom:a.bottom,crown:a.crown,
-   measured:false,structurallyVerified:false
+   measured:false,structurallyVerified:false,photoAligned:a.photoAligned===true
  }));
  const sorted=arches.slice().sort((a,b)=>a.left-b.left);
  const overlap=sorted.some((a,i)=>i>0&&a.left<sorted[i-1].right);
@@ -125,19 +125,30 @@ function mount({host,project,photos}){
   }
   scene.add(new T.HemisphereLight(0xffffff,0x76818c,1.6));
   const sun=new T.DirectionalLight(0xffffff,1.35);sun.position.set(cx+w*.4,cy+h*.6,12);scene.add(sun);
-  const camera=new T.PerspectiveCamera(40,1,.04,200);
+  // Fit the photographed facade into the ACTUAL wide/portrait viewport.
+  // Prior fixed camera distance made the wall occupy <25% of a desktop canvas.
+  const fov=44;
+  const camera=new T.PerspectiveCamera(fov,1,.04,200);
   const fit=Math.max(w,h);
-  camera.position.set(cx+fit*.15,cy+h*.13,fit*1.95);
+  const stageAspect=Math.max(.65,(host.clientWidth||430)/(host.clientHeight||360));
+  const halfTan=Math.tan(fov*Math.PI/360);
+  const requiredDistance=Math.max(h/(2*halfTan),w/(2*halfTan*stageAspect))*1.28;
+  const cameraDistance=Math.max(1.2,requiredDistance);
+  camera.position.set(cx+fit*.025,cy+h*.025,cameraDistance);
   camera.lookAt(cx,cy,0);
   controls=new T.OrbitControls(camera,renderer.domElement);
   controls.target.set(cx,cy,0);controls.enableDamping=true;controls.dampingFactor=.075;
-  controls.minDistance=fit*.7;controls.maxDistance=fit*4;controls.enablePan=false;
+  controls.minDistance=cameraDistance*.58;controls.maxDistance=cameraDistance*3;controls.enablePan=false;
   controls.maxPolarAngle=Math.PI*.85;
+  let lastWidth=0,lastHeight=0;
   function animate(){
    if(destroyed||!renderer)return;
    const width=host.clientWidth||370,height=host.clientHeight||320;
-   renderer.setSize(width,height,false);
-   camera.aspect=width/height;camera.updateProjectionMatrix();
+   if(width!==lastWidth||height!==lastHeight){
+     renderer.setSize(width,height,false);
+     camera.aspect=width/height;camera.updateProjectionMatrix();
+     lastWidth=width;lastHeight=height;
+   }
    controls.update();
    renderer.render(scene,camera);
    frame=requestAnimationFrame(animate);
@@ -150,6 +161,7 @@ function mount({host,project,photos}){
   host.dataset.archCount=String(g.length);
   host.dataset.roofAdded='false';
   host.dataset.takeoffEligible='false';
+  host.dataset.photoAligned=String(model.arches.every(a=>a.photoAligned));
   host.dataset.doors=String(model.doorArchId?1:0);
   if(model.overlap)host.dataset.overlapWarning='true';
  }
