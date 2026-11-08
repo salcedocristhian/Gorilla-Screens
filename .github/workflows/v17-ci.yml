@@ -8,6 +8,7 @@ on:
       - feature/porch-infill-trace-p0-20261107
       - feature/porch-infill-3d-concept-20261107
       - feature/porch-photo-alignment-qa-20261107
+      - feature/field-studio-ios-ux-20261107
   pull_request:
     branches:
       - main
@@ -38,6 +39,8 @@ jobs:
         run: node tests/test_porch_infill_3d.mjs
       - name: Porch photo-match dimensions and ownership tests
         run: node tests/test_porch_alignment.mjs
+      - name: Gorilla Field Studio iPhone journey, real brand and deliverable invariants
+        run: node tests/test_field_studio_ui.mjs
       - name: Single-capture API client
         run: node tests/test_vision_api.mjs
       - name: Authenticated Gemini bridge security
@@ -69,6 +72,8 @@ jobs:
         run: node tests/test_porch_infill_3d_browser.mjs
       - name: Porch Photo Match mobile guide-placement regression
         run: node tests/test_porch_alignment_browser.mjs
+      - name: Gorilla Field Studio seven-screen iPhone journey and regression
+        run: node tests/test_field_studio_browser.mjs
       - name: Save QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -80,6 +85,7 @@ jobs:
             qa-v17-porch-trace-*.png
             qa-v17-porch-infill-*.png
             qa-porch-photo-match-*.png
+            qa-field-studio-*.png
           if-no-files-found: ignore
 
   package-static-preview:
