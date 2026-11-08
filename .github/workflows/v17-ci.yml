@@ -3,9 +3,17 @@ on:
   push:
     branches:
       - feature/v17-design-to-purchase-studio
+      - feature/one-capture-ai-vision-20261107
+      - feature/porch-infill-review-p0-20261107
+      - feature/porch-infill-trace-p0-20261107
+      - feature/porch-infill-3d-concept-20261107
+      - feature/porch-photo-alignment-qa-20261107
+      - feature/field-studio-ios-ux-20261107
+      - feature/ai-designer-conversation-v1-20261107
   pull_request:
     branches:
       - main
+      - feature/vision-review-integration-20261107
 jobs:
   node-smoke:
     runs-on: ubuntu-latest
@@ -18,12 +26,28 @@ jobs:
             echo "Checking $f"
             node --check "$f"
           done
+      - name: Syntax check for isolated AI Bridge Worker
+        run: node --check cloudflare/gorilla-ai-bridge.mjs
       - name: Original model regression
         run: node tests/test_model.mjs
       - name: V17 geometry and procurement invariants
         run: node tests/test_v17.mjs
       - name: AI Vision project isolation and JSON contract
         run: node tests/test_vision.mjs
+      - name: Porch Infill visual tracing project-scope and nonmeasured guarantees
+        run: node tests/test_porch_trace.mjs
+      - name: Porch Infill 3D concept trace, unit and project-isolation checks
+        run: node tests/test_porch_infill_3d.mjs
+      - name: Porch photo-match dimensions and ownership tests
+        run: node tests/test_porch_alignment.mjs
+      - name: Gorilla Field Studio iPhone journey, real brand and deliverable invariants
+        run: node tests/test_field_studio_ui.mjs
+      - name: AI Designer questions, separate house context and product, measurement safety
+        run: node tests/test_ai_designer.mjs
+      - name: Single-capture API client
+        run: node tests/test_vision_api.mjs
+      - name: Authenticated Gemini bridge security
+        run: node tests/test_vision_bridge.mjs
 
   browser-smoke:
     runs-on: ubuntu-24.04
@@ -43,6 +67,18 @@ jobs:
         run: node tests/test_v17_browser.mjs
       - name: Two-house AI Vision mobile browser regression
         run: node tests/test_ai_browser.mjs
+      - name: Single capture mobile browser regression
+        run: node tests/test_one_capture_browser.mjs
+      - name: Porch Infill mobile tracing and persistence regression
+        run: node tests/test_porch_trace_browser.mjs
+      - name: Porch Infill 3D mobile interactive regression
+        run: node tests/test_porch_infill_3d_browser.mjs
+      - name: Porch Photo Match mobile guide-placement regression
+        run: node tests/test_porch_alignment_browser.mjs
+      - name: Gorilla Field Studio seven-screen iPhone journey and regression
+        run: node tests/test_field_studio_browser.mjs
+      - name: Gorilla AI Designer iPhone conversation and project persistence regression
+        run: node tests/test_ai_designer_browser.mjs
       - name: Save QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -50,4 +86,43 @@ jobs:
           name: v17-mobile-qa
           path: |
             qa-v17-mobile-*.png
+            qa-onecapture-*.png
+            qa-v17-porch-trace-*.png
+            qa-v17-porch-infill-*.png
+            qa-porch-photo-match-*.png
+            qa-field-studio-*.png
+            qa-ai-designer-*.png
           if-no-files-found: ignore
+
+  package-static-preview:
+    name: package-static-preview
+    runs-on: ubuntu-latest
+    needs: [node-smoke, browser-smoke]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package exactly the public frontend files
+        run: |
+          mkdir -p /tmp/gorilla-static
+          cp index.html sw.js manifest.webmanifest /tmp/gorilla-static/
+          for optional in robots.txt _headers; do if test -f "$optional"; then cp "$optional" /tmp/gorilla-static/; fi; done
+          cp -R assets css js docs /tmp/gorilla-static/
+          test -f /tmp/gorilla-static/index.html
+          test -f /tmp/gorilla-static/js/vision-api.js
+          cd /tmp/gorilla-static
+          zip -qr "$GITHUB_WORKSPACE/gorilla-v17-one-capture-static.zip" .
+      - name: Upload tested Cloudflare static ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: gorilla-v17-one-capture-static
+          path: gorilla-v17-one-capture-static.zip
+          if-no-files-found: error
+      - name: Package separate AI Bridge Worker source
+        run: |
+          cd cloudflare
+          zip -q "$GITHUB_WORKSPACE/gorilla-ai-bridge-worker.zip" gorilla-ai-bridge.mjs wrangler.bridge.json
+      - name: Upload gated Worker bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: gorilla-ai-bridge-worker
+          path: gorilla-ai-bridge-worker.zip
+          if-no-files-found: error

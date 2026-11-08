@@ -19,23 +19,40 @@ function action(name,text,kind='sec'){return '<button class="btn '+kind+'" data-
 function info(text){return '<div class="v17-note">'+text+'</div>';}
 
 function visionReviewPanel(p,photos){
- const a=p.aiVision;
- if(!a)return '<div class="v17-note"><strong>AI Vision:</strong> Sin análisis importado. <a href="#/p/'+esc(p.id)+'/fotos">Abrir Fotos y analizar →</a></div>';
- const valid=window.GSSVision?.belongsTo(a,p.id,photos);
- const g=a.findings?.siteGeometry||{};
- return '<div class="v17-note"><strong>AI Vision · Pending human review</strong>'+
-   '<p>Fotos vinculadas: '+(a.photoIds?.length||0)+' · '+esc(a.model||'Gemini')+
-   ' · '+(valid?'Evidencia disponible':'⚠ Evidencia no disponible')+'</p>'+
-   '<p>Techo observado: '+esc(g.houseRoofType||'sin confirmar')+
-   ' · Piscina: '+(g.poolStatus==='observed-in-images'?'observada':'no confirmada')+'</p>'+
-   '<p>Attachment: '+esc(a.findings?.fasciaAndAttachmentObservations?.[0]||'por verificar')+'</p>'+
-   '<p><strong>No aplica geometría, alturas ni anclajes automáticamente.</strong> '+
-   '<a href="#/p/'+esc(p.id)+'/fotos">Revisar hallazgos y evidencia en Fotos →</a></p></div>';
+  const a=p.aiVision;
+  if(!a)return '<div class="v17-note"><strong>AI Vision:</strong> Sin análisis importado. <a href="#/p/'+esc(p.id)+'/fotos">Abrir Fotos y analizar →</a></div>';
+  const valid=window.GSSVision?.belongsTo(a,p.id,photos);
+  const g=a.findings?.siteGeometry||{};
+  const openings=Array.isArray(g.facadeOpenings)?g.facadeOpenings:[];
+  const upper=Array.isArray(g.upperAttachmentZones)?g.upperAttachmentZones:[];
+  const obs=[...(a.findings?.visibleHouseFeatures||[]),...(a.findings?.suggestedEnclosureDesign||[])].join(' ');
+  const arches=/arch(?:es|ed)?|arcos?/i.test(obs) || openings.some(o=>/arch|arco/i.test(o.type||''));
+  const porchCandidate=g.coveredPatio===true&&arches;
+  const openingLines=openings.length?'<ol class="v17-evidence-list">'+openings.map(o=>
+    '<li><strong>'+esc(o.id||o.type||'Opening')+'</strong> · '+esc(o.type||'unknown')+
+    ' · '+esc(o.estimatedRelativePosition||'posición sin verificar')+
+    ' · evidencia: '+esc((o.evidencePhotoIndices||[]).map(n=>'Foto '+n).join(', ')||'no identificada')+
+    ' · <em>sin cotas verificadas</em></li>').join('')+'</ol>':
+    (arches?'<p class="v17-attach-warning"><strong>Falta identificación individual de los arcos:</strong> Gemini describió la fachada, pero no entregó cada opening con evidencia fotográfica. No generar paneles ni tomar cantidades de este análisis.</p>':'<p>Sin openings documentados por foto; no se infieren aberturas.</p>');
+  const upperLines=upper.length?'<p><strong>Interfaz superior/soffit:</strong> '+upper.map(o=>
+    esc(o.observation||o.id||'Zona observada')+' (fotos: '+esc((o.evidencePhotoIndices||[]).join(', ')||'sin referencia')+')').join('; ')+
+    '. <strong>Conexiones y cierres no verificados.</strong></p>':'';
+  return '<div class="v17-note v17-ai-review" aria-label="AI Vision observations requiring review">'+
+    '<strong>AI Vision · Pending human review</strong>'+
+    '<p>Fotos vinculadas: '+(a.photoIds?.length||0)+' · '+esc(a.model||'Gemini')+
+    ' · '+(valid?'Evidencia disponible':'⚠ Evidencia no disponible')+'</p>'+
+    '<p>Techo observado: '+esc(g.houseRoofType||'sin confirmar')+
+    ' · Piscina: '+(g.poolStatus==='observed-in-images'?'observada':'no confirmada')+'</p>'+
+    (porchCandidate?'<p><strong>Alternativa a revisar: Porch Infill (porche cubierto con arcos).</strong> La cubierta ya existe según las fotos. El Mansard actual es un concepto genérico y NO representa el diseño de esta casa.</p>':'')+
+    '<p><strong>Openings observados:</strong> '+openings.length+' registrados en JSON (no son medidas).</p>'+openingLines+upperLines+
+    '<p>Attachment: '+esc(a.findings?.fasciaAndAttachmentObservations?.[0]||'por verificar')+'</p>'+
+    '<p><strong>El análisis no cambia geometría, medidas, precios, takeoff ni aprobaciones.</strong> '+
+    '<a href="#/p/'+esc(p.id)+'/fotos">Revisar hallazgos y evidencia en Fotos →</a></p></div>';
 }
 function siteReference(s,photos,p){
  const site=E.siteLayout(s),raw=s.site||{},photo=photos.find(x=>x.id===site.photoId);
- const available=photos.filter(x=>['porche','frente','west','east','south','street','detalles','aerea','openings','render'].includes(x.cat));
- const photoOptions=[['','Choose a project photo'],...available.map(x=>[x.id,({porche:'Patio / interior',frente:'Facade',west:'West',east:'East',south:'South / Rear',street:'Street',detalles:'Fascia / detail',aerea:'Aerial',openings:'Opening',render:'Render reference'}[x.cat]||x.cat)+' · '+new Date(x.createdAt).toLocaleDateString('en-US')])];
+ const available=photos.filter(x=>['porche','frente','west','east','south','site','street','detalles','aerea','openings','render'].includes(x.cat));
+ const photoOptions=[['','Choose a project photo'],...available.map(x=>[x.id,({porche:'Patio / interior',frente:'Facade',west:'West',east:'East',south:'South / Rear',site:'AI Site',street:'Street',detalles:'Fascia / detail',aerea:'Aerial',openings:'Opening',render:'Render reference'}[x.cat]||x.cat)+' · '+new Date(x.createdAt).toLocaleDateString('en-US')])];
  const refStatus=site.estimated?'Reference dimensions estimated':'Field dimensions marked verified';
  const delta=(site.delta!==null&&Math.abs(site.delta)>.12)?
   '<div class="v17-note v17-attach-warning"><strong>Fascia connection mismatch: '+Math.abs(site.delta).toFixed(2)+' ft.</strong> Proposed enclosure height and existing fascia are different. Verify the actual attachment before releasing plans or purchasing.</div>':'';
@@ -321,13 +338,14 @@ function mount({project,photos,host,save,notify}){
  if(!hadSite||(source&&!hadPhoto))store();
  const tell=notify||((message)=>alert(message));
  function render(){
+   if(active!=='trace')window.GSSPorchTrace?.unmount?.();
    const detailsWasOpen=host.querySelector('.v17-site-more')?.open===true;
    if(previousPreview){previousPreview.destroy();previousPreview=null;}
    const r=E.takeoff(s);
-   const body={design:()=>design(s,r,project,photos),match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project));
+   const body={design:()=>design(s,r,project,photos),trace:()=>'<div id="v17-porch-trace"></div>',match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project));
    host.innerHTML='<div class="v17-shell"><header class="v17-heading"><div><div class="cap">GORILLA SCREEN STUDIO · V17 WORKSPACE</div><h1>Design to Purchase</h1><p class="lead">Diseña, presenta, calcula y prepara compras — sin perder el control humano.</p></div><span class="v17-beta">FIELD PILOT</span></header>'+
     '<nav class="v17-nav" aria-label="Studio sections">'+[
-    ['design','▧','Design'],['match','◐','Photo Match'],['docs','▤','Deliverables'],['buy','▦','Takeoff & Order']
+    ['design','▧','Design'],['trace','⌒','Porch Trace'],['match','◐','Photo Match'],['docs','▤','Deliverables'],['buy','▦','Takeoff & Order']
    ].map(x=>'<button data-v17-tab="'+x[0]+'" '+(active===x[0]?'aria-current="page"':'')+'><span>'+x[1]+'</span>'+x[2]+'</button>').join('')+'</nav>'+body()+'</div>';
    if(detailsWasOpen&&host.querySelector('.v17-site-more'))host.querySelector('.v17-site-more').open=true;
    host.querySelectorAll('[data-v17-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.v17Tab;render();});
@@ -416,6 +434,7 @@ function mount({project,photos,host,save,notify}){
       }catch(ex){tell(ex.message||'Operation could not be completed.');}
       finally{b.disabled=false;}
    });
+   if(active==='trace'&&window.GSSPorchTrace)window.GSSPorchTrace.mount({project,photos,host:host.querySelector('#v17-porch-trace'),save:store,notify:tell});
    if(active==='design'&&r.geometry.valid&&window.GSSV17Preview){
       try{previousPreview=window.GSSV17Preview.mount(host.querySelector('#v17-preview'),s,photos.find(x=>x.id===s.site?.photoId));}
       catch(e){console.warn('V17 preview unavailable',e); const stage=host.querySelector('#v17-preview');if(stage)stage.textContent='Vista 3D no disponible. Cálculos y documentos siguen accesibles.';}
