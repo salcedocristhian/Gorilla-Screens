@@ -21,7 +21,7 @@ const upload=[{id:'a',projectId:p.id,cat:'frente'},
 {id:'d',projectId:p.id,cat:'detalles'},{id:'x',projectId:p.id,cat:'porche'},
 {id:'z',projectId:p.id,cat:'aerea'},{id:'foreign',projectId:'property-b',cat:'aerea'}];
 assert.deepEqual([...AD.recommendedPhotos(p.id,upload)],['a','b','c','d','z'],
- 'Use the four site views plus this project's aerial, never the other house');
+ "Use the four site views plus this project's aerial, never the other house");
 const ev=AD.evidence(p,photos);
 assert.equal(ev.valid,true);
 assert.equal(ev.archCount,3);
