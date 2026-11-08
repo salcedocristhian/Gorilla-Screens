@@ -60,6 +60,7 @@ try{
  assert.equal(saved.studioV17?.verified||false,false,'Design review does not imply measurement verification');
  await page.locator('.topbar a[aria-label="Volver a proyectos"]').click();
  await page.locator('[data-a="newphoto"]').click();
+ await page.waitForURL(/#\/p\/[^/]+\/datos/);
  const newId=page.url().split('#/p/')[1].split('/')[0];
  assert.notEqual(newId,id);
  await page.goto('http://127.0.0.1:8765/#/p/'+newId+'/disenador',{waitUntil:'domcontentloaded'});
