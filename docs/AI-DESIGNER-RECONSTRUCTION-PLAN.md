@@ -1,5 +1,7 @@
 # Gorilla AI Designer → Claude-quality 3D (implementation roadmap)
 
+**Implementation update:** An experimental relative-coordinate photo-to-scene path now exists in `js/site-scene-contract.js`, `js/site-scene-view.js` and the authenticated Worker. See [SITE-SCENE-PILOT.md](SITE-SCENE-PILOT.md) for shipped scope, tests and pending live acceptance. The fuller dual-model contract below remains the target; calibrated reconstruction and Claude-level real-photo fidelity are not validated.
+
 **Product principle:** The existing property is a CONTEXT model; the proposed screen enclosure is the separate product. Only proposed, verified construction components enter takeoff and proposals.
 
 ## User journey
@@ -58,7 +60,7 @@ Compare estimated values and their evidence with the seller's verified measureme
 }
 ```
 
-This is a **target contract**, not yet produced or consumed by the current Worker.
+This nested dual-model contract is still a **target contract**. The current experimental Worker produces the simpler bounded relative-coordinate contract documented in SITE-SCENE-PILOT.md.
 
 ## Acceptance / quality gate
 
@@ -74,4 +76,6 @@ This is a **target contract**, not yet produced or consumed by the current Worke
 
 **Implemented here:** project-conditioned designer question flow, answer history stored per project, evidenced arch awareness, photo selection recommending 4+1 aerial, zero fake dimensions/approvals, dedicated iPhone route, automated tests.
 
-**Not yet implemented:** generative site scene graph, camera calibration / reconstruction across views, real dynamic Gemini question generation, estimated dimensions from calibrated imagery, detailed site 3D like the hand-authored Claude sample, and automatic 11×17 fabrication/engineering document generation.
+**Experimental implementation:** Gemini-generated relative site scene, validated wall/arch geometry, editable XYZ/shape parameters, evidence-photo comparison and separate conceptual screen overlay. Not yet validated against real photos.
+
+**Not yet implemented:** camera calibration / reconstruction across views, real dynamic Gemini question generation, estimated dimensions from calibrated imagery, detailed site 3D like the hand-authored Claude sample, and automatic 11×17 fabrication/engineering document generation.
