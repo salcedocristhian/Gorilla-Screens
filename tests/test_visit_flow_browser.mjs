@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {chromium} from 'playwright';
+const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader']});
+const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+const errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+const photo=fs.readFileSync(new URL('../assets/icon-192.png',import.meta.url));
+try{
+ await page.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded'});
+ await page.locator('[data-a="newphoto"]').click();
+ await page.locator('#addr').fill('22743 SW 56th Ave, Boca Raton, FL');
+ await page.locator('#cn').fill('Gorilla Client Test');
+ await page.locator('.tabbar a[href$="/fotos"]').click();
+ await page.getByRole('heading',{name:'Fotos del sitio'}).waitFor();
+ assert.equal(await page.locator('.fs-vision-card').count(),1);
+ assert.equal(await page.locator('.fs-photo-guide').count(),1);
+ assert.equal(await page.locator('[data-ai-quick-files]').count(),1);
+ assert.equal(await page.locator('.fs-vision-alt').getAttribute('open'),null,'Optional extra upload stays hidden');
+ assert.equal(await page.locator('[data-a="vision-analyze"]').count(),1,'One primary Gemini action');
+ assert.equal(await page.locator('.fs-step[data-fs-go="analisis"].done').count(),0,'No false completed AI step');
+ await page.locator('input[data-guide-cat="frente"]').setInputFiles({name:'front.png',mimeType:'image/png',buffer:photo});
+ await page.locator('.fs-guide-row.is-done').waitFor({timeout:15000});
+ assert.equal(await page.locator('[data-ai-photo]').count(),1,'Same saved photo selectable for Gemini');
+ assert.equal(await page.locator('[data-ai-photo]:checked').count(),1,'Photo is automatically selected');
+ await page.locator('.fs-vision-card').screenshot({path:'qa-visit-flow-one-app-mobile.png'});
+ assert.equal(await page.locator('#vision-authorized').isChecked(),false,'Explicit consent cannot be pre-filled');
+ assert.equal(await page.locator('#vision-token').inputValue(),'','Access code never prefilled from public source');
+ const id=page.url().split('#/p/')[1]?.split('/')[0]; assert.ok(id);
+ await page.goto('http://127.0.0.1:8765/#/p/'+id+'/entregar',{waitUntil:'domcontentloaded'});
+ await page.getByRole('heading',{name:'Proyecto listo para presentar'}).waitFor();
+ assert.equal(await page.locator('.fs-step[data-fs-go="analisis"].done').count(),0,'Navigation is not AI approval');
+ assert.equal(await page.locator('.fs-step[data-fs-go="disenador"].done').count(),0,'Navigation is not design approval');
+ assert.equal(await page.locator('.fs-step[data-fs-go="medidas"].done').count(),0,'Navigation is not measurement approval');
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+4),true);
+ assert.deepEqual(errors,[],JSON.stringify(errors));
+ console.log('PASS iPhone one-app visit: guided photos, no duplicate upload, authorization, genuine progress and safe delivery');
+}finally{await browser.close();}
