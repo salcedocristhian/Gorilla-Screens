@@ -79,7 +79,7 @@ function mount({host,project,photos}){
   host.appendChild(renderer.domElement);
   scene=new T.Scene();scene.background=new T.Color(0xe6eaf0);
   const color=model.finish==='bronze'?0x302923:0xe9ebe6;
-  const frame=addMaterial(new T.MeshStandardMaterial({color,metalness:.48,roughness:.42,side:T.DoubleSide}));
+  const frameMat=addMaterial(new T.MeshStandardMaterial({color,metalness:.48,roughness:.42,side:T.DoubleSide}));
   const masonry=addMaterial(new T.MeshStandardMaterial({color:0xcdb9a5,roughness:.96,side:T.DoubleSide}));
   const meshMat=addMaterial(new T.MeshStandardMaterial({color:0x6d8790,transparent:true,opacity:.31,
     depthWrite:false,roughness:1,side:T.DoubleSide}));
@@ -107,7 +107,7 @@ function mount({host,project,photos}){
     // Screen spline follows the actual user-edited arch contour rather than a rectangular bay.
     const points=pts.map(p=>new T.Vector3(p[0],p[1],.07));
     points.push(points[0].clone());
-    const spline=addObject(new T.TubeGeometry(new T.CatmullRomCurve3(points,false,'centripetal'),96,.025,5,false),frame);
+    const spline=addObject(new T.TubeGeometry(new T.CatmullRomCurve3(points,false,'centripetal'),96,.025,5,false),frameMat);
     spline.renderOrder=3;
     // Door location is only a selectable concept; no nominal 36x80 dimensions are inferred.
     if(model.doorArchId===a.id){
