@@ -373,7 +373,7 @@
 
   function tabFotos(el) {
     const p=S.project, by = c => S.photos.filter(x => x.cat === c);
-    el.innerHTML = PHOTO_CATS.map(([k, l, h]) => `
+    const photoSections = PHOTO_CATS.map(([k, l, h]) => `
       <section class="card" aria-labelledby="h-${k}">
         <div class="row" style="min-height:0"><b id="h-${k}" style="font-size:16px">${l}</b><span class="sub">${by(k).length || ''}</span></div>
         <p class="lead" style="margin:4px 0 0;font-size:14px">${h}</p>
@@ -382,8 +382,9 @@
           <label class="addph" aria-label="Agregar foto a ${esc(l)}">+<input type="file" accept="image/*" multiple data-cat="${k}"></label>
         </div>
       </section>`).join('');
-    if(p.kind==='field'){el.insertAdjacentHTML('afterbegin',`<section class="card field-start"><div class="cap">PASO 2 · FOTOGRAFÍAS</div><h2>Captura la propiedad real</h2><p class="lead">Toma el frente, cada opening, la fascia y el techo. Después toca ✎ Plano en una foto para trazar el dibujo y verificar dimensiones.</p><a class="btn sec block" href="#/p/${p.id}/editor" style="text-decoration:none">Abrir dibujo 2D</a><p class="lead smalltext">Las fotos se guardan aquí una sola vez. AI Vision guarda hallazgos revisables; las dimensiones se verifican en campo.</p></section>`);}
-    el.insertAdjacentHTML('afterbegin',visionCard(p));
+    el.innerHTML=(FS?FS.photoGuide(p,S.photos):'')+visionCard(p)+
+      (FS?'<details class="fs-advanced-media"><summary>Más fotografías · edición avanzada</summary>':'')+
+      photoSections+(FS?'</details>':'');
     const selection=()=>$$('[data-ai-photo]:checked',el).map(x=>x.value);
     $$('[data-ai-photo]',el).forEach(i=>i.onchange=()=>S.visionSelections.set(p.id,selection()));
     const tokenField=$('#vision-token',el);
@@ -469,7 +470,22 @@
         tabFotos(el);
       }catch(err){toast(err.message||'No se pudo guardar el análisis.',6000);}
     };
-    $$('input[data-cat]', el).forEach(i => i.onchange = async () => {
+    $('input[data-guide-cat]',el).forEach(i=>i.onchange=async()=>{
+      const files=[...i.files];if(!files.length)return;
+      const own=p.id;
+      toast('Guardando '+files.length+' foto(s)…');
+      for(const f of files){
+        try{
+          if(S.project?.id!==own)return;
+          const b=await resizeImage(f,1600);
+          await St.savePhoto({id:Mo.uid(),projectId:own,cat:i.dataset.guideCat,blob:b,createdAt:Date.now()});
+        }catch(err){toast('Una fotografía no se pudo guardar');}
+      }
+      if(S.project?.id!==own)return;
+      await loadPhotos(own);
+      if(S.project?.id===own)tabFotos(el);
+    });
+    $('input[data-cat]', el).forEach(i => i.onchange = async () => {
       const files = [...i.files]; if (!files.length) return; toast('Guardando ' + files.length + ' foto(s)…');
       for (const f of files) { try { const b = await resizeImage(f, 1600); await St.savePhoto({ id: Mo.uid(), projectId: p.id, cat: i.dataset.cat, blob: b, createdAt: Date.now() }); } catch (e) { toast('Una foto no se pudo leer'); } }
       if(S.project?.id!==p.id)return;
