@@ -227,16 +227,18 @@ function render({project,photos,host,save,navigate,notify}){
  (ev.missingViews.length?'<details class="ad-missing"><summary>Fotos adicionales sugeridas por Gemini</summary><ul>'+
  ev.missingViews.map(x=>'<li>'+enc(x)+'</li>').join('')+'</ul></details>':'')+'</section>';
  host.innerHTML=markup;
- host.querySelectorAll('[data-ad-answer]').forEach(b=>b.onclick=()=>{
-   try{answer(p,photos,q.id,b.dataset.adAnswer);save();render({project:p,photos,host,save,navigate,notify});}
+ host.querySelectorAll('[data-ad-answer]').forEach(b=>b.onclick=async()=>{
+   host.querySelectorAll('[data-ad-answer]').forEach(x=>x.disabled=true);
+   try{answer(p,photos,q.id,b.dataset.adAnswer);await save();render({project:p,photos,host,save,navigate,notify});}
+   catch(err){notify?.(err.message);render({project:p,photos,host,save,navigate,notify});}
+ });
+ host.querySelector('[data-ad-back]')?.addEventListener('click',async()=>{
+   try{back(p,photos);await save();render({project:p,photos,host,save,navigate,notify});}
    catch(err){notify?.(err.message);}
  });
- host.querySelector('[data-ad-back]')?.addEventListener('click',()=>{
-   back(p,photos);save();render({project:p,photos,host,save,navigate,notify});
- });
- host.querySelector('[data-ad-continue]')?.addEventListener('click',()=>{
+ host.querySelector('[data-ad-continue]')?.addEventListener('click',async()=>{
    if(!sum.complete)return;
-   try{approveIntent(p,photos);save();navigate('medidas');}catch(err){notify?.(err.message);}
+   try{approveIntent(p,photos);await save();navigate('medidas');}catch(err){notify?.(err.message);}
  });
 }
 window.GSSAiDesigner={evidence,recommendedPhotos,initial,get,questionSet,next,answer,back,summary,approveIntent,render};
