@@ -313,7 +313,7 @@
         saveSoon();
       });
     }
-    $('[data-mapmode]',el).forEach(b => b.onclick=()=>{ $$('[data-mapmode]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b))); const url=b.dataset.mapmode==='street'?m.street:m.sat; const target=$('#openSelectedMap',el); if(target)target.href=url; });
+    $$('[data-mapmode]',el).forEach(b => b.onclick=()=>{ $$('[data-mapmode]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b))); const url=b.dataset.mapmode==='street'?m.street:m.sat; const target=$('#openSelectedMap',el); if(target)target.href=url; });
     $('#addr').oninput = e => { p.address = e.target.value; p.geo = null; saveSoon(); refreshHeader(); };
     $('#addr').onchange = () => tabDatos(el);
     $$('[data-c]').forEach(i => i.oninput = () => { p.client[i.dataset.c] = i.value; saveSoon(); refreshHeader(); });
@@ -485,7 +485,7 @@
       await loadPhotos(own);
       if(S.project?.id===own)tabFotos(el);
     });
-    $('input[data-cat]', el).forEach(i => i.onchange = async () => {
+    $$('input[data-cat]', el).forEach(i => i.onchange = async () => {
       const files = [...i.files]; if (!files.length) return; toast('Guardando ' + files.length + ' foto(s)…');
       for (const f of files) { try { const b = await resizeImage(f, 1600); await St.savePhoto({ id: Mo.uid(), projectId: p.id, cat: i.dataset.cat, blob: b, createdAt: Date.now() }); } catch (e) { toast('Una foto no se pudo leer'); } }
       if(S.project?.id!==p.id)return;
