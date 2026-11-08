@@ -185,3 +185,13 @@ body.fs-ui{background:var(--bg)}
  .fs-journey{padding-inline:14px}
  .fs-design-card{grid-template-columns:1fr 100px}
 }
+
+/* Real photos: one-tap open/remove gallery before the advanced capture catalog. */
+.fs-photo-roll-wrap{margin:17px 0 8px}
+.fs-photo-roll-wrap>b{display:block;font-size:12px;letter-spacing:-.02em;color:var(--fs-ink);margin-bottom:9px}
+.fs-photo-roll{display:flex;overflow-x:auto;gap:10px;padding:2px 2px 9px;scrollbar-width:thin}
+.fs-photo-tile{position:relative;flex:0 0 83px;height:78px;border:1px solid var(--fs-border);background:var(--fs-elev);border-radius:12px}
+.fs-photo-tile>button:first-child{display:block;width:100%;height:100%;border:0;border-radius:12px;padding:0;overflow:hidden;background:transparent}
+.fs-photo-tile img{display:block;height:100%;width:100%;object-fit:cover}
+.fs-photo-remove{position:absolute;top:-6px;right:-6px;display:grid;place-items:center;border:1px solid var(--fs-border);background:var(--fs-surface);color:var(--danger);border-radius:99px;min-width:27px;min-height:27px;font-size:17px;font-weight:700;box-shadow:0 3px 8px rgba(0,0,0,.12)}
+.fs-photo-tile button:focus-visible,.fs-guide-row:focus-within{outline:3px solid color-mix(in srgb,var(--fs-blue) 40%,transparent);outline-offset:2px}
