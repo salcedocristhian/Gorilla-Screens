@@ -26,14 +26,14 @@ function visionReviewPanel(p,photos){
   const openings=Array.isArray(g.facadeOpenings)?g.facadeOpenings:[];
   const upper=Array.isArray(g.upperAttachmentZones)?g.upperAttachmentZones:[];
   const obs=[...(a.findings?.visibleHouseFeatures||[]),...(a.findings?.suggestedEnclosureDesign||[])].join(' ');
-  const arches=/\\barch(?:es|ed)?\\b|\\barcos?\\b/i.test(obs) || openings.some(o=>/arch|arco/i.test(o.type||''));
+  const arches=/arch(?:es|ed)?|arcos?/i.test(obs) || openings.some(o=>/arch|arco/i.test(o.type||''));
   const porchCandidate=g.coveredPatio===true&&arches;
   const openingLines=openings.length?'<ol class="v17-evidence-list">'+openings.map(o=>
     '<li><strong>'+esc(o.id||o.type||'Opening')+'</strong> · '+esc(o.type||'unknown')+
     ' · '+esc(o.estimatedRelativePosition||'posición sin verificar')+
     ' · evidencia: '+esc((o.evidencePhotoIndices||[]).map(n=>'Foto '+n).join(', ')||'no identificada')+
     ' · <em>sin cotas verificadas</em></li>').join('')+'</ol>':
-    '<p class="v17-attach-warning"><strong>Falta identificación individual de los arcos:</strong> Gemini describió la fachada, pero no entregó cada opening con evidencia fotográfica. No generar paneles ni tomar cantidades de este análisis.</p>';
+    (arches?'<p class="v17-attach-warning"><strong>Falta identificación individual de los arcos:</strong> Gemini describió la fachada, pero no entregó cada opening con evidencia fotográfica. No generar paneles ni tomar cantidades de este análisis.</p>':'<p>Sin openings documentados por foto; no se infieren aberturas.</p>');
   const upperLines=upper.length?'<p><strong>Interfaz superior/soffit:</strong> '+upper.map(o=>
     esc(o.observation||o.id||'Zona observada')+' (fotos: '+esc((o.evidencePhotoIndices||[]).join(', ')||'sin referencia')+')').join('; ')+
     '. <strong>Conexiones y cierres no verificados.</strong></p>':'';
