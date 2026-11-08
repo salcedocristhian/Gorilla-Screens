@@ -32,6 +32,10 @@ try{
  assert.match(await page.locator('.ad-warning').innerText(),/Ninguna medida/);
  assert.equal(await page.locator('.fs-bottom a').count(),5);
  await page.screenshot({path:'qa-ai-designer-boca-mobile.png',fullPage:true});
+ await page.waitForFunction(async id=>{
+   const p=await GSSStore.getProject(id);
+   return p?.aiDesigner?.answers?.finish==='bronze';
+ },id,{timeout:10000});
  const stored=await page.evaluate(async(id)=>await GSSStore.getProject(id),id);
  assert.equal(stored.aiDesigner.answers.kind,'porch');
  assert.equal(stored.aiDesigner.answers.finish,'bronze');
@@ -41,6 +45,10 @@ try{
  await page.locator('.ad-finished h3').waitFor();
  await page.locator('[data-ad-continue]').click();
  await page.getByRole('heading',{name:'Medidas y edición'}).waitFor();
+ await page.waitForFunction(async id=>{
+   const p=await GSSStore.getProject(id);
+   return p?.aiDesigner?.reviewed===true;
+ },id,{timeout:10000});
  const saved=await page.evaluate(async(id)=>await GSSStore.getProject(id),id);
  assert.equal(saved.aiDesigner.reviewed,true);
  assert.equal(saved.studioV17?.verified||false,false,'Design review does not imply measurement verification');
