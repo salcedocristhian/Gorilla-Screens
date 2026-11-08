@@ -7,7 +7,7 @@
  const path=(p,s)=>'#/p/'+encodeURIComponent(p.id)+'/'+s;
  const stages=[
   ['datos','Cliente'],['fotos','Fotos'],['aerea','Vista aérea'],
-  ['analisis','Análisis IA'],['studio','Diseño'],['precio','Cotizar'],['entregar','Entrega']
+  ['analisis','Análisis IA'],['disenador','Diseñador IA'],['medidas','Medidas'],['entregar','Entrega']
  ];
  const names={
   datos:['Cliente y proyecto','Empezamos con lo esencial.'],
@@ -24,18 +24,24 @@
   roof:['Diseño de cubierta','Solo si se construirá un techo de screen.'],
   parts:['Biblioteca técnica','Perfiles y detalles para revisión.']
  };
- const stage=tab=>Math.max(0,stages.findIndex(x=>x[0]===tab))>=0&&stages.some(x=>x[0]===tab)?
-  stages.findIndex(x=>x[0]===tab):
-  ['disenador','medidas','editor','roof','parts','3d'].includes(tab)?4:0;
- function header(p,tab){
+ const stage=tab=>{
+   const map={studio:5,precio:6,editor:5,roof:5,parts:5,'3d':5};
+   return Object.prototype.hasOwnProperty.call(map,tab)?map[tab]:
+     Math.max(0,stages.findIndex(x=>x[0]===tab));
+ };
+ function header(p,tab,photos=[]){
   const n=stage(tab),info=names[tab]||names.datos;
+  const progress=window.GSSVisitFlow?.status(p,photos)||{};
+  const recommendation=window.GSSVisitFlow?.next(p,photos);
+  const nextLink=recommendation&&recommendation.tab!==tab?
+    '<a class="fs-next-action" href="'+path(p,recommendation.tab)+'"><span>PRÓXIMA ACCIÓN</span><b>'+e(recommendation.label)+'</b><span aria-hidden="true">→</span></a>':'';
   return '<section class="fs-journey" aria-label="Flujo de visita">'+
    '<div class="fs-journey-line"><span class="fs-kicker">GORILLA FIELD STUDIO</span><span class="fs-step-count">PASO '+(n+1)+' DE 7</span></div>'+
    '<h1>'+e(info[0])+'</h1><p>'+e(info[1])+'</p>'+
    '<div class="fs-journey-steps" role="group" aria-label="Pasos del proyecto">'+stages.map((x,i)=>
-    '<button type="button" class="fs-step '+(i===n?'current':i<n?'done':'')+'" data-fs-go="'+x[0]+'" aria-label="Paso '+(i+1)+': '+x[1]+'" title="'+x[1]+'" '+(i===n?'aria-current="step"':'')+'>'+
-    '<span class="fs-step-dot">'+(i<n?'✓':(i+1))+'</span><span class="fs-step-name">'+x[1]+'</span></button>').join('')+
-   '</div></section>';
+    '<button type="button" class="fs-step '+(i===n?'current':progress[x[0]]===true?'done':'')+'" data-fs-go="'+x[0]+'" aria-label="Paso '+(i+1)+': '+x[1]+(progress[x[0]]===true?' completado':' pendiente')+'" title="'+x[1]+'" '+(i===n?'aria-current="step"':'')+'>'+
+    '<span class="fs-step-dot">'+(progress[x[0]]===true?'✓':(i+1))+'</span><span class="fs-step-name">'+x[1]+'</span></button>').join('')+
+   '</div>'+nextLink+'</section>';
  }
  const icon={
   datos:'<path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
@@ -46,7 +52,7 @@
  };
  function bottom(p,tab){
   const nav=[['datos','Visita'],['fotos','Capturar'],['studio','Diseñar'],['precio','Cotizar'],['entregar','Entregar']];
-  const current=['aerea','analisis'].includes(tab)?'fotos':['medidas','editor','roof','parts','3d'].includes(tab)?'studio':tab;
+  const current=['aerea','analisis'].includes(tab)?'fotos':['disenador','medidas','editor','roof','parts','3d'].includes(tab)?'studio':tab;
   return '<nav class="tabbar fs-bottom" aria-label="Navegación principal">'+nav.map(([key,name])=>
    '<a href="'+path(p,key)+'" '+(current===key?'aria-current="page"':'')+' aria-label="'+name+'">'+
    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icon[key]+'</svg><span>'+name+'</span></a>').join('')+'</nav>';

@@ -203,7 +203,7 @@
     document.title = (p.address || 'Proyecto') + ' · Gorilla Screens';
     const q = Mo.quoteTotals(p);
     app.innerHTML = topbar(p.address || 'Proyecto nuevo', (p.client.name || 'Sin cliente') + ' · ' + (q.sqft>0?q.sqft.toFixed(1) + ' pie²':'Visita en progreso'), `<a class="iconbtn" href="#/" aria-label="Volver a proyectos">${IC.back}</a>`) +
-      (FS ? FS.header(p,tab)+FS.bottom(p,tab) :
+      (FS ? FS.header(p,tab,S.photos)+FS.bottom(p,tab) :
       `<nav class="tabbar" aria-label="Secciones del proyecto">${TABS.map(([k, l]) => `<a href="#/p/${esc(p.id)}/${k}">${IC[k]}<span>${l}</span></a>`).join('')}</nav>`) +
       `<main class="wrap fs-project" id="tab"></main>`;
     const el = $('#tab');
@@ -247,7 +247,7 @@
     });
   }
 
-  function refreshHeader() { const q = Mo.quoteTotals(S.project); const t = $('.topbar .t'); if (t) t.innerHTML = `<b>${esc(S.project.address || 'Proyecto nuevo')}</b><span>${esc(S.project.client.name || 'Sin cliente')} · ${q.sqft.toFixed(1)} pie²</span>`; }
+  function refreshHeader() { const q = Mo.quoteTotals(S.project); const t = $('.topbar .t'); if (t) t.innerHTML = `<b>${esc(S.project.address || 'Proyecto nuevo')}</b><span>${esc(S.project.client.name || 'Sin cliente')} · ${q.sqft.toFixed(1)} pie²</span>`; const h=$('.fs-journey');if(FS&&h&&S.project){const tab=location.hash.split('/')[3]||'datos';h.outerHTML=FS.header(S.project,tab,S.photos);} }
 
   function mapLinks(p) {
     const a = encodeURIComponent(p.address || '');
@@ -356,19 +356,21 @@
       list('Limitaciones',a.findings?.limitations)+
       list('Alertas',a.warnings)+
       '<p class="lead smalltext">Este análisis no cambia medidas, openings, modelo 3D ni takeoff.</p>'+
-      '<a class="btn sec block" href="#/p/'+esc(p.id)+'/studio" style="text-decoration:none">Abrir Studio →</a></div>':'';
+      '<a class="btn block" href="#/p/'+esc(p.id)+'/disenador" style="text-decoration:none">Continuar con Diseñador IA →</a></div>':'';
     const status=S.photos.length?
-      'Selecciona entre 1 y 5 fotos de esta propiedad. Si acabas de capturarlas aquí, ya estarán seleccionadas.' :
-      'Primero captura las fotos aquí mismo; se guardarán en este proyecto, no tendrás que repetir la carga.';
-    return '<section class="card" aria-label="AI Vision project analysis"><div class="cap">GORILLA AI VISION · CAPTURA ÚNICA</div>'+
-      '<h2>Fotografiar → Analizar → Studio 3D</h2>'+
-      '<p class="lead">Toma o selecciona hasta cinco fotos una sola vez. Se guardan en este proyecto y el resultado de Gemini se guarda automáticamente. No necesitas abrir otra página ni copiar JSON.</p>'+
-      '<label class="btn sec block" style="display:block;text-align:center;cursor:pointer">📷 Capturar / seleccionar fotos (1–5)<input type="file" accept="image/*" multiple data-ai-quick-files style="position:absolute;opacity:0;width:1px;height:1px" aria-label="Capturar o seleccionar fotos para AI Vision"></label>'+
-      '<p class="lead smalltext">'+esc(status)+'</p>'+
-      '<div style="max-height:240px;overflow:auto">'+S.photos.map(ph=>'<label style="display:flex;align-items:center;gap:10px;padding:8px 0"><input type="checkbox" data-ai-photo value="'+esc(ph.id)+'" '+(picked.includes(ph.id)?'checked':'')+'><span>'+esc(ph.cat)+' · '+new Date(ph.createdAt).toLocaleDateString('en-US')+'</span></label>').join('')+'</div>'+
-      '<div class="field"><label for="vision-token">Clave privada de AI Vision (piloto)</label><input type="password" id="vision-token" autocomplete="off" placeholder="Clave configurada en Cloudflare"><p class="lead smalltext">Se mantiene solo en memoria mientras la aplicación está abierta. La clave de Gemini nunca llega al teléfono.</p></div>'+
-      '<label style="display:flex;align-items:flex-start;gap:9px;padding:9px 0"><input id="vision-authorized" type="checkbox"><span>Confirmo que tengo autorización para enviar estas fotografías a Gemini y que pertenecen al proyecto actual.</span></label>'+
-      '<button class="btn block" data-a="vision-analyze">Analizar fotos con IA → Guardar en este proyecto</button>'+
+      'Las fotografías seleccionadas ya están guardadas en esta visita. No necesitas volver a subirlas.' :
+      'Primero toma las fotografías de la propiedad arriba. Se usarán automáticamente en esta etapa.';
+    const selectedCount=picked.length;
+    return '<section class="card fs-vision-card" id="fs-vision" aria-label="AI Vision project analysis"><div class="fs-kicker">GORILLA AI VISION · UN SOLO REGISTRO</div>'+
+      '<h2>'+(valid?'Análisis IA listo para revisar':'Analiza esta visita con Gemini')+'</h2>'+
+      '<p class="lead">'+esc(status)+'</p>'+
+      '<div class="fs-vision-count"><span>✦ Fotografías seleccionadas</span><b>'+selectedCount+' / 5</b></div>'+
+      '<div class="fs-vision-select" aria-label="Fotos vinculadas a esta propiedad">'+S.photos.filter(ph=>ph.cat!=='render').map(ph=>'<label class="fs-ai-photo-opt"><input type="checkbox" data-ai-photo value="'+esc(ph.id)+'" '+(picked.includes(ph.id)?'checked':'')+'><span>'+esc(ph.cat)+' · '+new Date(ph.createdAt).toLocaleDateString('en-US')+'</span></label>').join('')+'</div>'+
+      '<div class="field fs-access-code"><label for="vision-token">Acceso seguro del equipo</label><input type="password" id="vision-token" autocomplete="off" placeholder="Código de acceso de Gorilla"><p class="lead smalltext">Una vez por sesión; solo se guarda en memoria. La clave real de Gemini permanece en Cloudflare.</p></div>'+
+      '<label class="fs-vision-consent"><input id="vision-authorized" type="checkbox"><span>Autorizo enviar estas fotos de la propiedad a Gemini para el análisis.</span></label>'+
+      '<button class="btn block" data-a="vision-analyze">'+(valid?'Actualizar análisis de esta visita':'Analizar fotografías guardadas →')+'</button>'+
+      '<details class="fs-vision-alt"><summary>Otras opciones de captura</summary><p class="lead smalltext">Usa esto solo si aún no agregaste fotos en la captura guiada.</p>'+
+      '<label class="btn sec block" style="display:block;text-align:center;cursor:pointer">📷 Añadir hasta cinco fotos<input type="file" accept="image/*" multiple data-ai-quick-files style="position:absolute;opacity:0;width:1px;height:1px" aria-label="Capturar o seleccionar fotos para AI Vision"></label></details>'+
       '<p id="vision-live-status" role="status" aria-live="polite" class="lead smalltext"></p>'+
       '<details class="card" style="margin-top:14px"><summary>Configuración avanzada / importar JSON anterior</summary>'+
       '<div class="field"><label for="vision-endpoint">URL del Worker AI Bridge</label><input id="vision-endpoint" type="url" autocomplete="off" spellcheck="false"></div>'+
@@ -390,6 +392,7 @@
           <label class="addph" aria-label="Agregar foto a ${esc(l)}">+<input type="file" accept="image/*" multiple data-cat="${k}"></label>
         </div>
       </section>`).join('');
+    refreshHeader();
     el.innerHTML=(FS?FS.photoGuide(p,S.photos):'')+visionCard(p)+
       (FS?'<details class="fs-advanced-media"><summary>Más fotografías · edición avanzada</summary>':'')+
       photoSections+(FS?'</details>':'');
@@ -447,7 +450,7 @@
         await St.saveProject(p);
         S.visionSelections.set(p.id,ids);
         status.textContent='Análisis guardado para revisión humana; el modelo 3D no se modificó.';
-        toast('AI Vision guardado en este proyecto. Abre Studio.',5500);
+        toast('Análisis guardado. Continúa con el Diseñador IA.',5500);
         tabFotos(el);
       }catch(err){
         status.textContent=err.message||'No se pudo completar el análisis.';

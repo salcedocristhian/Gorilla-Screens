@@ -38,7 +38,7 @@ try{
  await page.getByRole('heading',{name:'Análisis del sitio'}).waitFor();
  assert.equal(await page.locator('.fs-ai-empty').count(),1,'Never claim Gemini completed without a real report');
  await page.screenshot({path:'qa-field-studio-ai-ios.png',fullPage:true});
- await page.locator('button.fs-step[data-fs-go="studio"]').click();
+ await page.locator('.tabbar.fs-bottom a[href$="/studio"]').click();
  await page.getByRole('heading',{name:'Diseña tu screen'}).waitFor();
  await page.getByRole('heading',{name:'Design to Purchase'}).waitFor();
  assert.equal(await page.locator('.fs-design-card img').count(),1,'Own saved photo is the building context');

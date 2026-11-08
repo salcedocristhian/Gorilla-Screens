@@ -34,6 +34,7 @@ async function start(){
  await page.goto(base);
  await page.locator('[data-a="newphoto"]').click();
  await page.locator('.tabbar a[href$="/fotos"]').click();
+ await page.locator('.fs-vision-alt summary').click();
  await page.locator('[data-ai-quick-files]').waitFor();
  return page.url().split('#/p/')[1].split('/')[0];
 }
