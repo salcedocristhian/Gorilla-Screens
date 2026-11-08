@@ -344,7 +344,7 @@
   function visionCard(p) {
     const a=p.aiVision, valid=a&&window.GSSVision&&GSSVision.belongsTo(a,p.id,S.photos);
     const initial=S.visionSelections.get(p.id);
-    const picked=initial|| (S.photos.length<=5 ? S.photos.map(ph=>ph.id) : []);
+    const picked=initial|| (window.GSSAiDesigner?.recommendedPhotos(p.id,S.photos)|| (S.photos.length<=5?S.photos.map(ph=>ph.id):[]));
     const list=(title,items)=>items?.length?'<div class="pad"></div><b>'+esc(title)+'</b><ul>'+items.slice(0,12).map(v=>'<li>'+esc(v)+'</li>').join('')+'</ul>':'';
     const result=a?'<div class="card" style="background:var(--surface,#f5f5f7)"><div class="cap">AI ANALYSIS · PENDING HUMAN REVIEW</div>'+
       '<p class="lead">Modelo: '+esc(a.model)+' · '+(valid?'Evidencia vinculada al proyecto':'⚠ Faltan fotos de evidencia')+'</p>'+
