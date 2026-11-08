@@ -105,6 +105,11 @@
        '<span class="fs-guide-status">'+(photo?'✓':'＋')+'</span>'+
        '<input type="file" accept="image/*" data-guide-cat="'+cat+'" aria-label="Agregar '+title+'"></label>';
    }).join('')+'</div>'+
+   (photos.length?'<div class="fs-photo-roll-wrap"><b>Fotos guardadas</b><div class="fs-photo-roll">'+
+     photos.slice(0,20).map(ph=>'<div class="fs-photo-tile">'+
+       '<button type="button" data-open="'+e(ph.id)+'" aria-label="Ver foto '+e(ph.cat)+'"><img src="'+e(ph.url)+'" alt="Foto guardada · '+e(ph.cat)+'"></button>'+
+       '<button type="button" class="fs-photo-remove" data-del="'+e(ph.id)+'" aria-label="Eliminar foto '+e(ph.cat)+'">×</button>'+
+       '</div>').join('')+'</div></div>':'')+
    '<div class="fs-support fs-consent-note">Las fotos permanecen asociadas a este proyecto. El análisis con IA requiere tu autorización.</div>'+
    '<a class="btn block fs-next" href="'+path(p,'aerea')+'">Continuar a vista aérea <span>→</span></a>'+
    '</div></section>';
