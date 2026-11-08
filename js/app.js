@@ -279,7 +279,8 @@
   function tabDisenador(el){
     if(!window.GSSAiDesigner){el.innerHTML='<div class="card">El diseñador IA no está disponible.</div>';return;}
     window.GSSAiDesigner.render({
-      project:S.project,photos:S.photos,host:el,save:saveSoon,notify:toast,
+      project:S.project,photos:S.photos,host:el,
+      save:()=>St.saveProject(S.project).catch(err=>{toast('No se pudo guardar el brief del diseño.');throw err;}),notify:toast,
       navigate:tab=>{location.hash='#/p/'+encodeURIComponent(S.project.id)+'/'+tab;}
     });
   }
