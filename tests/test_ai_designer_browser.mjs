@@ -36,7 +36,13 @@ try{
    const p=await GSSStore.getProject(id);
    return p?.aiDesigner?.answers?.finish==='bronze';
  },id,{timeout:10000});
+ await page.waitForTimeout(500); // allow already queued IndexedDB write transactions to settle
  const stored=await page.evaluate(async(id)=>await GSSStore.getProject(id),id);
+ if(!stored?.aiDesigner)console.log('DEBUG design persisted record',JSON.stringify({
+   id,currentUrl:page.url(),keys:Object.keys(stored||{}),
+   answersVisible:await page.locator('.ad-finished').innerText()
+ }));
+ assert.ok(stored?.aiDesigner,'Designer answers must persist in the same project record');
  assert.equal(stored.aiDesigner.answers.kind,'porch');
  assert.equal(stored.aiDesigner.answers.finish,'bronze');
  assert.equal(stored.studioV17?.verified||false,false);
