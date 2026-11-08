@@ -7,6 +7,7 @@ on:
       - feature/porch-infill-review-p0-20261107
       - feature/porch-infill-trace-p0-20261107
       - feature/porch-infill-3d-concept-20261107
+      - feature/porch-photo-alignment-qa-20261107
   pull_request:
     branches:
       - main
@@ -35,6 +36,8 @@ jobs:
         run: node tests/test_porch_trace.mjs
       - name: Porch Infill 3D concept trace, unit and project-isolation checks
         run: node tests/test_porch_infill_3d.mjs
+      - name: Porch photo-match dimensions and ownership tests
+        run: node tests/test_porch_alignment.mjs
       - name: Single-capture API client
         run: node tests/test_vision_api.mjs
       - name: Authenticated Gemini bridge security
@@ -64,6 +67,8 @@ jobs:
         run: node tests/test_porch_trace_browser.mjs
       - name: Porch Infill 3D mobile interactive regression
         run: node tests/test_porch_infill_3d_browser.mjs
+      - name: Porch Photo Match mobile guide-placement regression
+        run: node tests/test_porch_alignment_browser.mjs
       - name: Save QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -74,6 +79,7 @@ jobs:
             qa-onecapture-*.png
             qa-v17-porch-trace-*.png
             qa-v17-porch-infill-*.png
+            qa-porch-photo-match-*.png
           if-no-files-found: ignore
 
   package-static-preview:

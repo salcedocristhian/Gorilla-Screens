@@ -132,3 +132,18 @@
 .v17-porch-stage{height:clamp(290px,42vw,430px);width:100%;border-radius:14px;overflow:hidden;background:#e6eaf0;border:1px solid var(--line);position:relative}
 .v17-porch-stage canvas{display:block;width:100%;height:100%}
 @media(max-width:520px){.v17-porch-stage{height:300px}.v17-porch-concept{padding:10px;margin:12px 0}}
+
+/* Porch photo alignment: explicit three-point placement and unchanged-house photo match. */
+.v17-trace-position{margin:13px 0;padding:12px 13px;border:1px solid var(--line);border-radius:13px;background:var(--field)}
+.v17-trace-position strong{display:block;font-size:13px;color:var(--text)}
+.v17-trace-position p{font-size:12px;line-height:1.5;margin:6px 0 9px;color:var(--sub)}
+.v17-trace-position .btn{min-height:42px;width:auto;font-weight:700}
+.v17-trace-position:has([data-trace-place]){scroll-margin-top:120px}
+.v17-trace-position[data-active="true"]{border-color:var(--accent);background:var(--field)}
+.v17-trace-position[data-active="true"] p{font-weight:650;color:var(--text)}
+.v17-photo-match-title{font-size:14px;letter-spacing:-.015em;color:var(--text);margin:20px 0 9px}
+.v17-porch-match{width:100%;position:relative;border-radius:14px;overflow:hidden;background:#dfe6ea;border:1px solid var(--line)}
+.v17-porch-match>img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+.v17-porch-match>svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.v17-porch-stage{background:linear-gradient(180deg,#e4e9ed,#d9e0e7)}
+@media(max-width:520px){.v17-trace-position .btn{width:100%}.v17-photo-match-title{font-size:13px}}
