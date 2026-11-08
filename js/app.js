@@ -2,6 +2,8 @@
 (function () {
   const Mo = window.GSSModel, St = window.GSSStore;
   const app = document.getElementById('app');
+  const FS = window.GSSFieldUI;
+  document.body.classList.add('fs-ui');
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const $ = (sel, el) => (el || document).querySelector(sel);
   const $$ = (sel, el) => [...(el || document).querySelectorAll(sel)];
@@ -92,6 +94,7 @@
   // ---------- router
   let routeGeneration=0;
   window.addEventListener('hashchange', route);
+  app.addEventListener('click',event=>{const jump=event.target.closest('[data-fs-go]');if(jump&&S.project){event.preventDefault();location.hash='#/p/'+S.project.id+'/'+jump.dataset.fsGo;}});
   async function route() {
     const generation=++routeGeneration;
     const h = location.hash.replace(/^#\/?/, '');
@@ -127,16 +130,17 @@
   async function homeView() {
     document.title = 'Gorilla Screens · Proyectos';
     const list = await St.listProjects();
-    app.innerHTML = topbar('Gorilla Screens', 'Proyectos de screens', '', `<a class="iconbtn" href="#/ajustes" aria-label="Ajustes de la compañía">${IC.gear}</a>`) + `
-      <main class="wrap">
-        <h1 class="h1">Proyectos</h1>
-        <p class="lead">Para campo: fotografías → dibujo → medidas verificadas → 3D y plano.</p>
+    app.innerHTML = topbar('Field Studio', 'Gorilla Screening Solutions LLC', '', `<a class="iconbtn" href="#/ajustes" aria-label="Ajustes de la compañía">${IC.gear}</a>`) + `
+      <main class="wrap fs-home">
+        ${FS ? FS.introHome() : ''}
+        <div class="fs-home-label">Nueva visita</div>
         <div class="home-tools" style="margin-bottom:14px">
           <label class="field project-search"><span class="sr-only">Filtrar proyectos</span><input id="projectFilter" type="search" placeholder="⌕  Buscar proyectos" aria-label="Buscar proyectos"></label>
           <button class="iconbtn tool-plus" data-a="new" aria-label="Crear nuevo proyecto" title="Nuevo proyecto">+</button>
           <label class="iconbtn tool-upload" title="Importar proyecto" aria-label="Importar proyecto">⇧<input type="file" accept=".json,application/json" data-a="import"></label>
         </div>
-        <div class="card field-start"><div class="row"><span class="l"><b>Desde fotografías</b><br><span class="sub">Crea un proyecto vacío, toma fotos y traza tu propio diseño.</span></span><span class="field-steps">01 → 02 → 03</span></div><button class="btn block" data-a="newphoto">+ Proyecto desde fotos</button></div>
+        <button class="fs-visit-start" data-a="newphoto" style="all:unset;cursor:pointer;display:block;width:100%;margin-bottom:22px" aria-label="Crear nueva visita">${FS ? FS.homeStart() : '<div class="card">+ Nueva visita</div>'}</button>
+        <div class="fs-home-label">Proyectos recientes</div>
         ${St.usingMemory() ? '<p class="warn">Este navegador no permite guardar en el dispositivo (modo privado). Los proyectos se perderán al cerrar.</p>' : ''}
         <div class="plist">
           ${list.map(p => { const q = Mo.quoteTotals(Mo.normalize(p)); return `<a class="pitem" href="#/p/${esc(p.id)}/datos" style="text-decoration:none;color:inherit"><img class="thumb" src="${LOGO}" alt=""><div style="min-width:0"><b>${esc(p.address || 'Sin dirección')}</b><span>${esc(p.client && p.client.name || 'Sin cliente')} · ${Mo.hasApprovedGeometry(p) || p.kind!=='field' ? q.sqft.toFixed(0)+' pie²' : 'Geometría pendiente'}${p.quote?.rate>0 && q.sqft>0 ? ' · '+Mo.money(q.total) : ''}</span><span>Actualizado ${new Date(p.updatedAt).toLocaleDateString('es-US')}</span></div></a>`; }).join('') || '<div class="card sub">Todavía no hay proyectos.</div>'}
@@ -198,19 +202,22 @@
     const p = S.project;
     document.title = (p.address || 'Proyecto') + ' · Gorilla Screens';
     const q = Mo.quoteTotals(p);
-    app.innerHTML = topbar(p.address || 'Proyecto nuevo', (p.client.name || 'Sin cliente') + ' · ' + q.sqft.toFixed(1) + ' pie²', `<a class="iconbtn" href="#/" aria-label="Volver a proyectos">${IC.back}</a>`) +
-      `<nav class="tabbar" aria-label="Secciones del proyecto">${TABS.map(([k, l]) => `<a href="#/p/${esc(p.id)}/${k}" ${(['editor','roof','parts'].includes(tab) ? k === 'medidas' : k === tab) ? 'aria-current="page"' : ''}>${IC[k]}<span>${l}</span></a>`).join('')}</nav>
-       <main class="wrap" id="tab"></main>`;
+    app.innerHTML = topbar(p.address || 'Proyecto nuevo', (p.client.name || 'Sin cliente') + ' · ' + (q.sqft>0?q.sqft.toFixed(1) + ' pie²':'Visita en progreso'), `<a class="iconbtn" href="#/" aria-label="Volver a proyectos">${IC.back}</a>`) +
+      (FS ? FS.header(p,tab)+FS.bottom(p,tab) :
+      `<nav class="tabbar" aria-label="Secciones del proyecto">${TABS.map(([k, l]) => `<a href="#/p/${esc(p.id)}/${k}">${IC[k]}<span>${l}</span></a>`).join('')}</nav>`) +
+      `<main class="wrap fs-project" id="tab"></main>`;
     const el = $('#tab');
     if (tab === 'editor') { return tabEditor(el); }
     if (tab === 'roof') { return tabRoof(el); }
     if (tab === 'parts') { return tabParts(el); }
-    ({ datos: tabDatos, fotos: tabFotos, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
+    ({ datos: tabDatos, fotos: tabFotos, aerea: tabAerea, analisis: tabAnalisis, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
+    if(FS && tab!=='studio' && ['medidas','3d'].includes(tab))el.insertAdjacentHTML('afterbegin',FS.more(p,tab));
     window.scrollTo(0, 0);
   }
   function tabStudio(el) {
     if (!window.GSSV17) { el.innerHTML='<div class="card">V17 Studio no disponible.</div>'; return; }
-    window.GSSV17.mount({project:S.project,photos:S.photos,host:el,save:saveSoon,notify:toast});
+    if(FS)el.innerHTML=FS.studio(S.project,S.photos)+FS.more(S.project,'studio')+'<div id="fs-v17-workspace"></div>';
+    window.GSSV17.mount({project:S.project,photos:S.photos,host:FS?el.querySelector('#fs-v17-workspace'):el,save:saveSoon,notify:toast});
   }
 
   function tabEditor(el) {
@@ -251,6 +258,24 @@
       embed: `https://maps.google.com/maps?q=${a}&t=k&z=20&ie=UTF8&iwloc=&output=embed`
     };
   }
+  function tabAerea(el){
+    const p=S.project;
+    el.innerHTML=FS?FS.aerial(p,S.photos,mapLinks(p)):'<div class="card">Vista aérea no disponible.</div>';
+    const input=$('[data-field-aerial]',el);
+    if(input)input.onchange=async()=>{
+      const file=input.files?.[0];if(!file)return;
+      try{
+        const b=await resizeImage(file,1600);
+        await St.savePhoto({id:Mo.uid(),projectId:p.id,cat:'aerea',blob:b,createdAt:Date.now()});
+        if(S.project?.id!==p.id)return;
+        await loadPhotos(p.id);
+        if(S.project?.id===p.id){tabAerea(el);toast('Vista aérea guardada en este proyecto.');}
+      }catch(err){toast('No se pudo guardar la imagen aérea.');}
+    };
+  }
+  function tabAnalisis(el){
+    el.innerHTML=FS?FS.analysis(S.project,S.photos):'<div class="card">Consulta el análisis en Fotos.</div>';
+  }
   function tabDatos(el) {
     const p = S.project, m = mapLinks(p);
     el.innerHTML = `
@@ -277,6 +302,17 @@
         <div class="field"><label for="nt">Notas internas</label><textarea id="nt">${esc(p.notes)}</textarea></div>
         <button class="btn danger block" data-a="del">Borrar proyecto</button>
       </div>`;
+    if(FS){
+      el.insertAdjacentHTML('afterbegin',FS.client(p));
+      const oldFieldIntro=el.querySelector('.field-start');
+      if(oldFieldIntro)oldFieldIntro.remove();
+      el.insertAdjacentHTML('beforeend','<a class="btn block fs-client-next" href="#/p/'+p.id+'/fotos">Continuar a fotografías →</a>');
+      $$('[data-fs-type]',el).forEach(b=>b.onclick=()=>{
+        p.fieldType=b.dataset.fsType;
+        $$('[data-fs-type]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+        saveSoon();
+      });
+    }
     $$('[data-mapmode]',el).forEach(b => b.onclick=()=>{ $$('[data-mapmode]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b))); const url=b.dataset.mapmode==='street'?m.street:m.sat; const target=$('#openSelectedMap',el); if(target)target.href=url; });
     $('#addr').oninput = e => { p.address = e.target.value; p.geo = null; saveSoon(); refreshHeader(); };
     $('#addr').onchange = () => tabDatos(el);
@@ -337,7 +373,7 @@
 
   function tabFotos(el) {
     const p=S.project, by = c => S.photos.filter(x => x.cat === c);
-    el.innerHTML = PHOTO_CATS.map(([k, l, h]) => `
+    const photoSections = PHOTO_CATS.map(([k, l, h]) => `
       <section class="card" aria-labelledby="h-${k}">
         <div class="row" style="min-height:0"><b id="h-${k}" style="font-size:16px">${l}</b><span class="sub">${by(k).length || ''}</span></div>
         <p class="lead" style="margin:4px 0 0;font-size:14px">${h}</p>
@@ -346,8 +382,9 @@
           <label class="addph" aria-label="Agregar foto a ${esc(l)}">+<input type="file" accept="image/*" multiple data-cat="${k}"></label>
         </div>
       </section>`).join('');
-    if(p.kind==='field'){el.insertAdjacentHTML('afterbegin',`<section class="card field-start"><div class="cap">PASO 2 · FOTOGRAFÍAS</div><h2>Captura la propiedad real</h2><p class="lead">Toma el frente, cada opening, la fascia y el techo. Después toca ✎ Plano en una foto para trazar el dibujo y verificar dimensiones.</p><a class="btn sec block" href="#/p/${p.id}/editor" style="text-decoration:none">Abrir dibujo 2D</a><p class="lead smalltext">Las fotos se guardan aquí una sola vez. AI Vision guarda hallazgos revisables; las dimensiones se verifican en campo.</p></section>`);}
-    el.insertAdjacentHTML('afterbegin',visionCard(p));
+    el.innerHTML=(FS?FS.photoGuide(p,S.photos):'')+visionCard(p)+
+      (FS?'<details class="fs-advanced-media"><summary>Más fotografías · edición avanzada</summary>':'')+
+      photoSections+(FS?'</details>':'');
     const selection=()=>$$('[data-ai-photo]:checked',el).map(x=>x.value);
     $$('[data-ai-photo]',el).forEach(i=>i.onchange=()=>S.visionSelections.set(p.id,selection()));
     const tokenField=$('#vision-token',el);
@@ -433,6 +470,21 @@
         tabFotos(el);
       }catch(err){toast(err.message||'No se pudo guardar el análisis.',6000);}
     };
+    $$('input[data-guide-cat]',el).forEach(i=>i.onchange=async()=>{
+      const files=[...i.files];if(!files.length)return;
+      const own=p.id;
+      toast('Guardando '+files.length+' foto(s)…');
+      for(const f of files){
+        try{
+          if(S.project?.id!==own)return;
+          const b=await resizeImage(f,1600);
+          await St.savePhoto({id:Mo.uid(),projectId:own,cat:i.dataset.guideCat,blob:b,createdAt:Date.now()});
+        }catch(err){toast('Una fotografía no se pudo guardar');}
+      }
+      if(S.project?.id!==own)return;
+      await loadPhotos(own);
+      if(S.project?.id===own)tabFotos(el);
+    });
     $$('input[data-cat]', el).forEach(i => i.onchange = async () => {
       const files = [...i.files]; if (!files.length) return; toast('Guardando ' + files.length + ' foto(s)…');
       for (const f of files) { try { const b = await resizeImage(f, 1600); await St.savePhoto({ id: Mo.uid(), projectId: p.id, cat: i.dataset.cat, blob: b, createdAt: Date.now() }); } catch (e) { toast('Una foto no se pudo leer'); } }
@@ -594,6 +646,7 @@
         <div class="field" style="margin-top:8px"><label for="qn">Número de cotización / job</label><input id="qn" value="${esc(p.quote.number)}" placeholder="Q-${new Date().getFullYear()}-001"></div>
         <button class="btn block" data-a="qpdf">Descargar cotización PDF</button>
       </div>`;
+    if(FS)el.insertAdjacentHTML('beforeend','<a class="btn block fs-price-next" href="#/p/'+p.id+'/entregar">Continuar a entregables →</a>');
     const upd = () => { const q2 = Mo.quoteTotals(p); $('#scr', el).textContent = Mo.money(q2.screens); $('#tot', el).textContent = Mo.money(q2.total); $('.row .l', $$('.card', el)[1]).textContent = q2.sqft.toFixed(1) + ' pie² × ' + Mo.money(q2.rate); saveSoon(); };
     $$('[data-rate]', el).forEach(b => b.onclick = () => { $$('[data-rate]', el).forEach(x => x.setAttribute('aria-pressed', String(x === b))); if (b.dataset.rate === 'otro') { $('#otroBox', el).classList.remove('hidden'); $('#otro', el).focus(); p.quote.rate = parseFloat($('#otro', el).value) || 0; } else { $('#otroBox', el).classList.add('hidden'); p.quote.rate = +b.dataset.rate; } upd(); });
     $('#otro', el).oninput = e => { p.quote.rate = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0; upd(); };
@@ -652,6 +705,7 @@
         <p class="lead" style="font-size:13px;margin:8px 0 0">El link lleva el modelo y la cotización, sin fotos ni notas internas.</p></div>`}
       <div class="card"><p class="cap">Pasar el proyecto a otro dispositivo</p>
         <button class="btn sec block" data-a="export">Exportar proyecto con fotos (.json)</button></div>`;
+    if(FS)el.insertAdjacentHTML('afterbegin',FS.deliverables(p,S.photos,p.kind!=='field'||Mo.hasApprovedGeometry(p),Number(p.quote?.rate)>0));
     const btnPlan=$('[data-a="plan"]',el);if(btnPlan)btnPlan.onclick = () => makePlan(el);
     const btnQuote=$('[data-a="quote"]',el);if(btnQuote)btnQuote.onclick = () => makeQuote(el);
     if($('#wp',el))$('#wp', el).onclick = e => e.currentTarget.setAttribute('aria-pressed', String(e.currentTarget.getAttribute('aria-pressed') !== 'true'));
