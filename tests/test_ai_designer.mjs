@@ -53,6 +53,14 @@ assert.equal(plan.measurements[0].status,'needs-reference-or-field-measurement')
 assert.equal(p.studioV17.verified,false);
 assert.deepEqual(p.openings,[],'AI conversation cannot fabricate opening sizes');
 assert.equal(p.quote.rate,0,'Conversation cannot set prices');
+AD.approveIntent(p,photos);
+assert.equal(p.aiDesigner.reviewed,true);
+assert.equal(p.frameColor,'bronze','Confirmed choice reaches existing project settings');
+assert.equal(p.studioV17.finish,'bronze');
+assert.equal(p.studioV17.width,0,'No invented enclosure dimensions');
+assert.equal(p.studioV17.verified,false,'Selecting materials is not a field measurement');
+assert.equal(p.studioV17.roof,undefined,'Porch does not acquire an invented roof');
+
 AD.back(p,photos);
 assert.equal(AD.next(p,photos).id,'scale');
 const foreign={id:'property-b',kind:'field',fieldType:'pool',openings:[]},foreignPhotos=[{id:'ph1',projectId:'property-b'}];
