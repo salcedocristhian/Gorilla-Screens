@@ -16,6 +16,12 @@ p.aiVision=Vision.normalize({findings:{visibleHouseFeatures:['Covered porch with
  {id:'arch-three',type:'arch',evidencePhotoIndices:[1,4]}],
  candidateAttachmentWalls:[],upperAttachmentZones:[],recommendedCaptureMissingViews:['Back patio view']
 }}},p.id,photos.map(ph=>ph.id));
+const upload=[{id:'a',projectId:p.id,cat:'frente'},
+{id:'b',projectId:p.id,cat:'west'},{id:'c',projectId:p.id,cat:'east'},
+{id:'d',projectId:p.id,cat:'detalles'},{id:'x',projectId:p.id,cat:'porche'},
+{id:'z',projectId:p.id,cat:'aerea'},{id:'foreign',projectId:'property-b',cat:'aerea'}];
+assert.deepEqual([...AD.recommendedPhotos(p.id,upload)],['a','b','c','d','z'],
+ 'Use the four site views plus this project's aerial, never the other house');
 const ev=AD.evidence(p,photos);
 assert.equal(ev.valid,true);
 assert.equal(ev.archCount,3);
