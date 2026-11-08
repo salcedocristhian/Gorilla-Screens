@@ -258,6 +258,24 @@
       embed: `https://maps.google.com/maps?q=${a}&t=k&z=20&ie=UTF8&iwloc=&output=embed`
     };
   }
+  function tabAerea(el){
+    const p=S.project;
+    el.innerHTML=FS?FS.aerial(p,S.photos,mapLinks(p)):'<div class="card">Vista aérea no disponible.</div>';
+    const input=$('[data-field-aerial]',el);
+    if(input)input.onchange=async()=>{
+      const file=input.files?.[0];if(!file)return;
+      try{
+        const b=await resizeImage(file,1600);
+        await St.savePhoto({id:Mo.uid(),projectId:p.id,cat:'aerea',blob:b,createdAt:Date.now()});
+        if(S.project?.id!==p.id)return;
+        await loadPhotos(p.id);
+        if(S.project?.id===p.id){tabAerea(el);toast('Vista aérea guardada en este proyecto.');}
+      }catch(err){toast('No se pudo guardar la imagen aérea.');}
+    };
+  }
+  function tabAnalisis(el){
+    el.innerHTML=FS?FS.analysis(S.project,S.photos):'<div class="card">Consulta el análisis en Fotos.</div>';
+  }
   function tabDatos(el) {
     const p = S.project, m = mapLinks(p);
     el.innerHTML = `
@@ -284,7 +302,18 @@
         <div class="field"><label for="nt">Notas internas</label><textarea id="nt">${esc(p.notes)}</textarea></div>
         <button class="btn danger block" data-a="del">Borrar proyecto</button>
       </div>`;
-    $$('[data-mapmode]',el).forEach(b => b.onclick=()=>{ $$('[data-mapmode]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b))); const url=b.dataset.mapmode==='street'?m.street:m.sat; const target=$('#openSelectedMap',el); if(target)target.href=url; });
+    if(FS){
+      el.insertAdjacentHTML('afterbegin',FS.client(p));
+      const oldFieldIntro=el.querySelector('.field-start');
+      if(oldFieldIntro)oldFieldIntro.remove();
+      el.insertAdjacentHTML('beforeend','<a class="btn block fs-client-next" href="#/p/'+p.id+'/fotos">Continuar a fotografías →</a>');
+      $('[data-fs-type]',el).forEach(b=>b.onclick=()=>{
+        p.fieldType=b.dataset.fsType;
+        $('[data-fs-type]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+        saveSoon();
+      });
+    }
+    $('[data-mapmode]',el).forEach(b => b.onclick=()=>{ $$('[data-mapmode]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b))); const url=b.dataset.mapmode==='street'?m.street:m.sat; const target=$('#openSelectedMap',el); if(target)target.href=url; });
     $('#addr').oninput = e => { p.address = e.target.value; p.geo = null; saveSoon(); refreshHeader(); };
     $('#addr').onchange = () => tabDatos(el);
     $$('[data-c]').forEach(i => i.oninput = () => { p.client[i.dataset.c] = i.value; saveSoon(); refreshHeader(); });
