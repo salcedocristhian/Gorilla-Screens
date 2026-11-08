@@ -123,3 +123,12 @@
 .v17-trace-card .v17-btnrow{display:flex;gap:8px;flex-wrap:wrap}
 .v17-trace-card .v17-btnrow .btn{width:auto;min-height:40px}
 @media(max-width:520px){.v17-nav button{font-size:9px}.v17-trace-card{padding:12px}.v17-trace-card .v17-btnrow .btn{flex:1 1 auto}.v17-trace-text{font-size:38px}}
+
+/* Independent 3D preview of user-traced arched Porch Infill; photo proportions only. */
+.v17-porch-concept{margin:18px 0 16px;padding:13px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+.v17-porch-concept h3{margin:2px 0 8px;font-size:17px;letter-spacing:-.02em;color:var(--text)}
+.v17-porch-concept p{margin:8px 0}
+.v17-porch-concept .v17-field{margin:12px 0}
+.v17-porch-stage{height:clamp(290px,42vw,430px);width:100%;border-radius:14px;overflow:hidden;background:#e6eaf0;border:1px solid var(--line);position:relative}
+.v17-porch-stage canvas{display:block;width:100%;height:100%}
+@media(max-width:520px){.v17-porch-stage{height:300px}.v17-porch-concept{padding:10px;margin:12px 0}}

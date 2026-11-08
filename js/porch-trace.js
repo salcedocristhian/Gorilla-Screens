@@ -24,6 +24,7 @@ function read(project,photos){
  return {schemaVersion:1,projectId:project.id,photoId:ph.id,
    arches:(Array.isArray(d.arches)?d.arches:[]).slice(0,12).map(cleanArch).filter(Boolean),
    status:'draft-needs-human-review',verified:false,
+   conceptDoorArchId:(Array.isArray(d.arches)&&d.arches.some(a=>a.id===d.conceptDoorArchId))?String(d.conceptDoorArchId):'',
    updatedAt:Number(d.updatedAt)||0};
 }
 function defaultArch(i,count){
@@ -38,8 +39,14 @@ function path(a){
  return 'M'+x0+','+yb+' L'+x0+','+ys+' Q'+x0+','+y+' '+c+','+y+
    ' Q'+x1+','+y+' '+x1+','+ys+' L'+x1+','+yb+' Z';
 }
+let activeMount=null;
+function unmount(){if(activeMount){activeMount.destroy();activeMount=null;}}
 function mount({project,photos,host,save,notify}){
+ unmount();
  if(!host||!project?.id)return;
+ let preview3d=null;
+ const instance={destroy(){if(preview3d){preview3d.destroy();preview3d=null;}}};
+ activeMount=instance;
  const owned=(photos||[]).filter(p=>photoOwned(p,project.id)&&p.url);
  const tell=notify||((msg)=>alert(msg));
  let draft=read(project,owned);
@@ -59,6 +66,7 @@ function mount({project,photos,host,save,notify}){
    }).join('');
  }
  function render(){
+  if(preview3d){preview3d.destroy();preview3d=null;}
   if(!owned.length){
     host.innerHTML='<section class="card v17-trace-card"><h2>Porch Infill · Trazado fotográfico</h2>'+
       '<p>No hay fotografías de esta propiedad disponibles aquí. <a href="#/p/'+esc(project.id)+'/fotos">Agregar fotos →</a></p></section>';return;
@@ -79,6 +87,16 @@ function mount({project,photos,host,save,notify}){
       '<p class="smalltext lead">Arrastra los círculos del arco seleccionado: extremos, altura de corona y base. Las guías comienzan en posiciones ilustrativas, NO detectadas automáticamente.</p>'+
       '<div class="v17-trace-list">'+draft.arches.map((a,i)=>
         '<button type="button" data-trace-select="'+i+'" aria-pressed="'+(selected===i)+'">'+esc(a.label)+' · sin cotas</button>').join('')+'</div>'+
+      '<section class="v17-porch-concept" aria-label="Porch Infill conceptual 3D">'+
+      '<h3>Porch Infill · Vista 3D conceptual</h3>'+
+      '<p class="smalltext lead">Reproduce los contornos que ajustaste, con malla y spline de aluminio. Conserva los muros y arcos como contexto esquemático; NO agrega techo ni inventa cotas.</p>'+
+      '<label class="v17-field"><span>Puerta opcional · posición visual solamente</span><select data-trace-door>'+
+      '<option value="">Sin puerta propuesta</option>'+
+      draft.arches.map(a=>'<option value="'+esc(a.id)+'" '+(a.id===draft.conceptDoorArchId?'selected':'')+'>'+esc(a.label)+'</option>').join('')+
+      '</select></label>'+
+      '<div class="v17-porch-stage" id="v17-porch-infill-3d"></div>'+
+      '<p class="smalltext lead">Arrastra para girar el concepto 3D. El espesor de muro, el diseño de la puerta y la ubicación de anclajes NO están verificados.</p>'+
+      '</section>'+
       '<div class="v17-btnrow"><button class="btn sec" data-trace-add>+ Añadir abertura</button>'+
       '<button class="btn sec" data-trace-delete '+(!draft.arches.length?'disabled':'')+'>Quitar seleccionada</button>'+
       '<button class="btn sec" data-trace-clear>Restablecer dibujo</button></div>'+
@@ -87,14 +105,14 @@ function mount({project,photos,host,save,notify}){
   host.querySelector('[data-trace-photo]').onchange=e=>{
     const id=e.target.value;
     if(draft&&draft.photoId!==id&&draft.arches.length&&!confirm('La nueva foto requiere un trazado nuevo. ¿Reemplazar el trazado actual?')){render();return;}
-    draft={schemaVersion:1,projectId:project.id,photoId:id,arches:[],status:'draft-needs-human-review',verified:false,updatedAt:Date.now()};
+    draft={schemaVersion:1,projectId:project.id,photoId:id,arches:[],conceptDoorArchId:'',status:'draft-needs-human-review',verified:false,updatedAt:Date.now()};
     selected=0;persist();render();
   };
   const start=host.querySelector('[data-trace-start]');
   if(start)start.onclick=()=>{
     draft={schemaVersion:1,projectId:project.id,photoId:photo.id,
       arches:Array.from({length:count},(_,i)=>defaultArch(i,count)),
-      status:'draft-needs-human-review',verified:false,updatedAt:Date.now()};
+      conceptDoorArchId:'',status:'draft-needs-human-review',verified:false,updatedAt:Date.now()};
     selected=0;persist();render();tell('Guías provisionales creadas. Ajusta cada arco sobre la foto; no son medidas de campo.');
   };
   host.querySelectorAll('[data-trace-select]').forEach(b=>b.onclick=()=>{selected=Number(b.dataset.traceSelect);render();});
@@ -104,8 +122,14 @@ function mount({project,photos,host,save,notify}){
     const a=defaultArch(draft.arches.length,Math.max(3,draft.arches.length+1));
     a.id='arch-'+Date.now();draft.arches.push(a);selected=draft.arches.length-1;persist();render();
   };
+  const door=host.querySelector('[data-trace-door]');
+  if(door)door.onchange=e=>{draft.conceptDoorArchId=draft.arches.some(a=>a.id===e.target.value)?e.target.value:'';persist();render();};
   const del=host.querySelector('[data-trace-delete]');
-  if(del)del.onclick=()=>{draft.arches.splice(selected,1);selected=Math.max(0,Math.min(selected,draft.arches.length-1));persist();render();};
+  if(del)del.onclick=()=>{
+    const removed=draft.arches.splice(selected,1);
+    if(removed.some(a=>a.id===draft.conceptDoorArchId))draft.conceptDoorArchId='';
+    selected=Math.max(0,Math.min(selected,draft.arches.length-1));persist();render();
+  };
   const reset=host.querySelector('[data-trace-clear]');
   if(reset)reset.onclick=()=>{if(!confirm('¿Eliminar solo los contornos de esta propiedad?'))return;draft.arches=[];selected=0;persist();render();};
   const svg=host.querySelector('.v17-trace-svg');
@@ -132,8 +156,12 @@ function mount({project,photos,host,save,notify}){
     const stop=()=>{if(!dragging)return;dragging=null;persist();render();};
     svg.onpointerup=stop;svg.onpointercancel=stop;svg.onlostpointercapture=stop;
   }
+ if(draft&&draft.arches.length&&window.GSSPorchInfill3D){
+   preview3d=window.GSSPorchInfill3D.mount({host:host.querySelector('#v17-porch-infill-3d'),project,photos:owned});
+ }
  }
  render();
+ return instance;
 }
-window.GSSPorchTrace={read,mount,cleanArch,path};
+window.GSSPorchTrace={read,mount,unmount,cleanArch,path};
 })();

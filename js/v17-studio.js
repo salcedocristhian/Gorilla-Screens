@@ -338,6 +338,7 @@ function mount({project,photos,host,save,notify}){
  if(!hadSite||(source&&!hadPhoto))store();
  const tell=notify||((message)=>alert(message));
  function render(){
+   if(active!=='trace')window.GSSPorchTrace?.unmount?.();
    const detailsWasOpen=host.querySelector('.v17-site-more')?.open===true;
    if(previousPreview){previousPreview.destroy();previousPreview=null;}
    const r=E.takeoff(s);
