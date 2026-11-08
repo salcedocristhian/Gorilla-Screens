@@ -2,6 +2,8 @@
 (function () {
   const Mo = window.GSSModel, St = window.GSSStore;
   const app = document.getElementById('app');
+  const FS = window.GSSFieldUI;
+  document.body.classList.add('fs-ui');
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const $ = (sel, el) => (el || document).querySelector(sel);
   const $$ = (sel, el) => [...(el || document).querySelectorAll(sel)];
@@ -92,6 +94,7 @@
   // ---------- router
   let routeGeneration=0;
   window.addEventListener('hashchange', route);
+  app.addEventListener('click',event=>{const jump=event.target.closest('[data-fs-go]');if(jump&&S.project){event.preventDefault();location.hash='#/p/'+S.project.id+'/'+jump.dataset.fsGo;}});
   async function route() {
     const generation=++routeGeneration;
     const h = location.hash.replace(/^#\/?/, '');
@@ -127,16 +130,17 @@
   async function homeView() {
     document.title = 'Gorilla Screens · Proyectos';
     const list = await St.listProjects();
-    app.innerHTML = topbar('Gorilla Screens', 'Proyectos de screens', '', `<a class="iconbtn" href="#/ajustes" aria-label="Ajustes de la compañía">${IC.gear}</a>`) + `
-      <main class="wrap">
-        <h1 class="h1">Proyectos</h1>
-        <p class="lead">Para campo: fotografías → dibujo → medidas verificadas → 3D y plano.</p>
+    app.innerHTML = topbar('Field Studio', 'Gorilla Screening Solutions LLC', '', `<a class="iconbtn" href="#/ajustes" aria-label="Ajustes de la compañía">${IC.gear}</a>`) + `
+      <main class="wrap fs-home">
+        ${FS ? FS.introHome() : ''}
+        <div class="fs-home-label">Nueva visita</div>
         <div class="home-tools" style="margin-bottom:14px">
           <label class="field project-search"><span class="sr-only">Filtrar proyectos</span><input id="projectFilter" type="search" placeholder="⌕  Buscar proyectos" aria-label="Buscar proyectos"></label>
           <button class="iconbtn tool-plus" data-a="new" aria-label="Crear nuevo proyecto" title="Nuevo proyecto">+</button>
           <label class="iconbtn tool-upload" title="Importar proyecto" aria-label="Importar proyecto">⇧<input type="file" accept=".json,application/json" data-a="import"></label>
         </div>
-        <div class="card field-start"><div class="row"><span class="l"><b>Desde fotografías</b><br><span class="sub">Crea un proyecto vacío, toma fotos y traza tu propio diseño.</span></span><span class="field-steps">01 → 02 → 03</span></div><button class="btn block" data-a="newphoto">+ Proyecto desde fotos</button></div>
+        <button class="fs-visit-start" data-a="newphoto" style="all:unset;cursor:pointer;display:block;width:100%;margin-bottom:22px" aria-label="Crear nueva visita">${FS ? FS.homeStart() : '<div class="card">+ Nueva visita</div>'}</button>
+        <div class="fs-home-label">Proyectos recientes</div>
         ${St.usingMemory() ? '<p class="warn">Este navegador no permite guardar en el dispositivo (modo privado). Los proyectos se perderán al cerrar.</p>' : ''}
         <div class="plist">
           ${list.map(p => { const q = Mo.quoteTotals(Mo.normalize(p)); return `<a class="pitem" href="#/p/${esc(p.id)}/datos" style="text-decoration:none;color:inherit"><img class="thumb" src="${LOGO}" alt=""><div style="min-width:0"><b>${esc(p.address || 'Sin dirección')}</b><span>${esc(p.client && p.client.name || 'Sin cliente')} · ${Mo.hasApprovedGeometry(p) || p.kind!=='field' ? q.sqft.toFixed(0)+' pie²' : 'Geometría pendiente'}${p.quote?.rate>0 && q.sqft>0 ? ' · '+Mo.money(q.total) : ''}</span><span>Actualizado ${new Date(p.updatedAt).toLocaleDateString('es-US')}</span></div></a>`; }).join('') || '<div class="card sub">Todavía no hay proyectos.</div>'}
@@ -198,19 +202,22 @@
     const p = S.project;
     document.title = (p.address || 'Proyecto') + ' · Gorilla Screens';
     const q = Mo.quoteTotals(p);
-    app.innerHTML = topbar(p.address || 'Proyecto nuevo', (p.client.name || 'Sin cliente') + ' · ' + q.sqft.toFixed(1) + ' pie²', `<a class="iconbtn" href="#/" aria-label="Volver a proyectos">${IC.back}</a>`) +
-      `<nav class="tabbar" aria-label="Secciones del proyecto">${TABS.map(([k, l]) => `<a href="#/p/${esc(p.id)}/${k}" ${(['editor','roof','parts'].includes(tab) ? k === 'medidas' : k === tab) ? 'aria-current="page"' : ''}>${IC[k]}<span>${l}</span></a>`).join('')}</nav>
-       <main class="wrap" id="tab"></main>`;
+    app.innerHTML = topbar(p.address || 'Proyecto nuevo', (p.client.name || 'Sin cliente') + ' · ' + (q.sqft>0?q.sqft.toFixed(1) + ' pie²':'Visita en progreso'), `<a class="iconbtn" href="#/" aria-label="Volver a proyectos">${IC.back}</a>`) +
+      (FS ? FS.header(p,tab)+FS.bottom(p,tab) :
+      `<nav class="tabbar" aria-label="Secciones del proyecto">${TABS.map(([k, l]) => `<a href="#/p/${esc(p.id)}/${k}">${IC[k]}<span>${l}</span></a>`).join('')}</nav>`) +
+      `<main class="wrap fs-project" id="tab"></main>`;
     const el = $('#tab');
     if (tab === 'editor') { return tabEditor(el); }
     if (tab === 'roof') { return tabRoof(el); }
     if (tab === 'parts') { return tabParts(el); }
-    ({ datos: tabDatos, fotos: tabFotos, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
+    ({ datos: tabDatos, fotos: tabFotos, aerea: tabAerea, analisis: tabAnalisis, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
+    if(FS && tab!=='studio' && ['medidas','3d'].includes(tab))el.insertAdjacentHTML('afterbegin',FS.more(p,tab));
     window.scrollTo(0, 0);
   }
   function tabStudio(el) {
     if (!window.GSSV17) { el.innerHTML='<div class="card">V17 Studio no disponible.</div>'; return; }
-    window.GSSV17.mount({project:S.project,photos:S.photos,host:el,save:saveSoon,notify:toast});
+    if(FS)el.innerHTML=FS.studio(S.project,S.photos)+FS.more(S.project,'studio')+'<div id="fs-v17-workspace"></div>';
+    window.GSSV17.mount({project:S.project,photos:S.photos,host:FS?el.querySelector('#fs-v17-workspace'):el,save:saveSoon,notify:toast});
   }
 
   function tabEditor(el) {
