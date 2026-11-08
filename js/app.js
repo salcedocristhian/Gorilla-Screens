@@ -646,6 +646,7 @@
         <div class="field" style="margin-top:8px"><label for="qn">Número de cotización / job</label><input id="qn" value="${esc(p.quote.number)}" placeholder="Q-${new Date().getFullYear()}-001"></div>
         <button class="btn block" data-a="qpdf">Descargar cotización PDF</button>
       </div>`;
+    if(FS)el.insertAdjacentHTML('beforeend','<a class="btn block fs-price-next" href="#/p/'+p.id+'/entregar">Continuar a entregables →</a>');
     const upd = () => { const q2 = Mo.quoteTotals(p); $('#scr', el).textContent = Mo.money(q2.screens); $('#tot', el).textContent = Mo.money(q2.total); $('.row .l', $$('.card', el)[1]).textContent = q2.sqft.toFixed(1) + ' pie² × ' + Mo.money(q2.rate); saveSoon(); };
     $$('[data-rate]', el).forEach(b => b.onclick = () => { $$('[data-rate]', el).forEach(x => x.setAttribute('aria-pressed', String(x === b))); if (b.dataset.rate === 'otro') { $('#otroBox', el).classList.remove('hidden'); $('#otro', el).focus(); p.quote.rate = parseFloat($('#otro', el).value) || 0; } else { $('#otroBox', el).classList.add('hidden'); p.quote.rate = +b.dataset.rate; } upd(); });
     $('#otro', el).oninput = e => { p.quote.rate = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0; upd(); };
@@ -704,6 +705,7 @@
         <p class="lead" style="font-size:13px;margin:8px 0 0">El link lleva el modelo y la cotización, sin fotos ni notas internas.</p></div>`}
       <div class="card"><p class="cap">Pasar el proyecto a otro dispositivo</p>
         <button class="btn sec block" data-a="export">Exportar proyecto con fotos (.json)</button></div>`;
+    if(FS)el.insertAdjacentHTML('afterbegin',FS.deliverables(p,S.photos,p.kind!=='field'||Mo.hasApprovedGeometry(p),Number(p.quote?.rate)>0));
     const btnPlan=$('[data-a="plan"]',el);if(btnPlan)btnPlan.onclick = () => makePlan(el);
     const btnQuote=$('[data-a="quote"]',el);if(btnQuote)btnQuote.onclick = () => makeQuote(el);
     if($('#wp',el))$('#wp', el).onclick = e => e.currentTarget.setAttribute('aria-pressed', String(e.currentTarget.getAttribute('aria-pressed') !== 'true'));
