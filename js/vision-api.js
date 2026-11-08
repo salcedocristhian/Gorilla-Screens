@@ -29,12 +29,13 @@
     if (bytes>MAX_BYTES) throw Error('Las fotos superan 9 MB. Reduce la resolución antes de analizar.');
     return photos;
   }
-  async function analyze({projectId,photos,token,url,signal,fetchImpl}) {
+  async function analyze({projectId,photos,token,url,signal,fetchImpl,task}) {
     selectedPhotos(projectId,photos);
     const accessToken=String(token||'').trim();
     if (accessToken.length<32) throw Error('Ingresa la clave privada de acceso a AI Vision (mínimo 32 caracteres).');
     const form=new FormData();
     form.append('projectId',projectId);
+    if(task==='reconstruct')form.append('task','reconstruct');
     for(const [i,p] of photos.entries()) form.append('photos',p.blob,'photo-'+(i+1)+'.jpg');
     let response;
     try {
@@ -51,9 +52,13 @@
     catch(_){throw Error('AI Vision devolvió una respuesta que no es JSON.');}
     if(!response.ok) throw Error(String(payload?.error||'Error de AI Vision ('+response.status+').').slice(0,240));
     if(payload?.projectId && payload.projectId!==projectId) throw Error('AI Vision devolvió un resultado de otro proyecto. Se rechazó.');
+    if(task==='reconstruct'){
+      if(payload?.projectId!==projectId||!payload.scene)throw Error('Este Worker aún no ofrece reconstrucción 3D. El modelo anterior se conserva.');
+      return window.GSSSiteSceneContract.normalize(payload.scene,projectId,photos.map(p=>p.id));
+    }
     const raw=payload?.report||payload;
     if(!window.GSSVision)throw Error('Falta el validador del reporte AI Vision.');
     return window.GSSVision.normalize(raw,projectId,photos.map(p=>p.id));
   }
-  window.GSSVisionAPI={DEFAULT_ENDPOINT,endpoint,selectedPhotos,analyze};
+  window.GSSVisionAPI={DEFAULT_ENDPOINT,endpoint,selectedPhotos,analyze,reconstruct:options=>analyze({...options,task:'reconstruct'})};
 })();
