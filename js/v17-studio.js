@@ -19,18 +19,35 @@ function action(name,text,kind='sec'){return '<button class="btn '+kind+'" data-
 function info(text){return '<div class="v17-note">'+text+'</div>';}
 
 function visionReviewPanel(p,photos){
- const a=p.aiVision;
- if(!a)return '<div class="v17-note"><strong>AI Vision:</strong> Sin análisis importado. <a href="#/p/'+esc(p.id)+'/fotos">Abrir Fotos y analizar →</a></div>';
- const valid=window.GSSVision?.belongsTo(a,p.id,photos);
- const g=a.findings?.siteGeometry||{};
- return '<div class="v17-note"><strong>AI Vision · Pending human review</strong>'+
-   '<p>Fotos vinculadas: '+(a.photoIds?.length||0)+' · '+esc(a.model||'Gemini')+
-   ' · '+(valid?'Evidencia disponible':'⚠ Evidencia no disponible')+'</p>'+
-   '<p>Techo observado: '+esc(g.houseRoofType||'sin confirmar')+
-   ' · Piscina: '+(g.poolStatus==='observed-in-images'?'observada':'no confirmada')+'</p>'+
-   '<p>Attachment: '+esc(a.findings?.fasciaAndAttachmentObservations?.[0]||'por verificar')+'</p>'+
-   '<p><strong>No aplica geometría, alturas ni anclajes automáticamente.</strong> '+
-   '<a href="#/p/'+esc(p.id)+'/fotos">Revisar hallazgos y evidencia en Fotos →</a></p></div>';
+  const a=p.aiVision;
+  if(!a)return '<div class="v17-note"><strong>AI Vision:</strong> Sin análisis importado. <a href="#/p/'+esc(p.id)+'/fotos">Abrir Fotos y analizar →</a></div>';
+  const valid=window.GSSVision?.belongsTo(a,p.id,photos);
+  const g=a.findings?.siteGeometry||{};
+  const openings=Array.isArray(g.facadeOpenings)?g.facadeOpenings:[];
+  const upper=Array.isArray(g.upperAttachmentZones)?g.upperAttachmentZones:[];
+  const obs=[...(a.findings?.visibleHouseFeatures||[]),...(a.findings?.suggestedEnclosureDesign||[])].join(' ');
+  const arches=/\\barch(?:es|ed)?\\b|\\barcos?\\b/i.test(obs) || openings.some(o=>/arch|arco/i.test(o.type||''));
+  const porchCandidate=g.coveredPatio===true&&arches;
+  const openingLines=openings.length?'<ol class="v17-evidence-list">'+openings.map(o=>
+    '<li><strong>'+esc(o.id||o.type||'Opening')+'</strong> · '+esc(o.type||'unknown')+
+    ' · '+esc(o.estimatedRelativePosition||'posición sin verificar')+
+    ' · evidencia: '+esc((o.evidencePhotoIndices||[]).map(n=>'Foto '+n).join(', ')||'no identificada')+
+    ' · <em>sin cotas verificadas</em></li>').join('')+'</ol>':
+    '<p class="v17-attach-warning"><strong>Falta identificación individual de los arcos:</strong> Gemini describió la fachada, pero no entregó cada opening con evidencia fotográfica. No generar paneles ni tomar cantidades de este análisis.</p>';
+  const upperLines=upper.length?'<p><strong>Interfaz superior/soffit:</strong> '+upper.map(o=>
+    esc(o.observation||o.id||'Zona observada')+' (fotos: '+esc((o.evidencePhotoIndices||[]).join(', ')||'sin referencia')+')').join('; ')+
+    '. <strong>Conexiones y cierres no verificados.</strong></p>':'';
+  return '<div class="v17-note v17-ai-review" aria-label="AI Vision observations requiring review">'+
+    '<strong>AI Vision · Pending human review</strong>'+
+    '<p>Fotos vinculadas: '+(a.photoIds?.length||0)+' · '+esc(a.model||'Gemini')+
+    ' · '+(valid?'Evidencia disponible':'⚠ Evidencia no disponible')+'</p>'+
+    '<p>Techo observado: '+esc(g.houseRoofType||'sin confirmar')+
+    ' · Piscina: '+(g.poolStatus==='observed-in-images'?'observada':'no confirmada')+'</p>'+
+    (porchCandidate?'<p><strong>Alternativa a revisar: Porch Infill (porche cubierto con arcos).</strong> La cubierta ya existe según las fotos. El Mansard actual es un concepto genérico y NO representa el diseño de esta casa.</p>':'')+
+    '<p><strong>Openings observados:</strong> '+openings.length+' registrados en JSON (no son medidas).</p>'+openingLines+upperLines+
+    '<p>Attachment: '+esc(a.findings?.fasciaAndAttachmentObservations?.[0]||'por verificar')+'</p>'+
+    '<p><strong>El análisis no cambia geometría, medidas, precios, takeoff ni aprobaciones.</strong> '+
+    '<a href="#/p/'+esc(p.id)+'/fotos">Revisar hallazgos y evidencia en Fotos →</a></p></div>';
 }
 function siteReference(s,photos,p){
  const site=E.siteLayout(s),raw=s.site||{},photo=photos.find(x=>x.id===site.photoId);
