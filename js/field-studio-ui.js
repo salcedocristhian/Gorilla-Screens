@@ -77,6 +77,16 @@
   ['porche','Desde el interior','Puertas, ventanas y suelo','photo'],
   ['aerea','Vista aérea','Ubicación y perímetro del patio','aerial']
  ];
+ function client(p){
+  const types=[['pool','Pool enclosure','Estructura nueva'],['porch','Porch infill','Aberturas existentes'],
+   ['lanai','Lanai / patio','Cubierta y screen'],['repair','Repair / rescreen','Revisión de obra']];
+  return '<section class="card fs-client-intro"><span class="fs-kicker">NUEVA VISITA</span>'+
+   '<h2>Primero, conoce al cliente.</h2><p class="fs-support">Confirma el nombre, teléfono y dirección de la cita. Después fotografía el área donde construiremos.</p></section>'+
+   '<section class="fs-panel"><span class="fs-kicker">TIPO DE PROYECTO</span><h2>¿Qué vamos a diseñar?</h2>'+
+   '<div class="fs-client-type">'+types.map(([k,l,h])=>
+      '<button type="button" data-fs-type="'+k+'" aria-pressed="'+(p.fieldType===k)+'">'+l+'<span>'+h+'</span></button>').join('')+
+   '</div></section>';
+ }
  function photoGuide(p,photos){
   const completed=slots.filter(([cat])=>photos.some(ph=>ph.cat===cat)).length;
   const shot=photos.find(ph=>ph.cat==='frente'||ph.cat==='site')||photos.find(ph=>ph.cat!=='render');
@@ -168,5 +178,5 @@
    '</div><div class="fs-delivery-warning">Planos conceptuales. No son planos sellados ni autorización de ingeniería o fabricación.</div>'+
    '</div></section>';
  }
- window.GSSFieldUI={header,bottom,more,introHome,homeStart,photoGuide,aerial,analysis,studio,deliverables,stage,stages};
+ window.GSSFieldUI={header,bottom,more,introHome,homeStart,client,photoGuide,aerial,analysis,studio,deliverables,stage,stages};
 })();
