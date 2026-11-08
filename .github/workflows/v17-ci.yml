@@ -4,6 +4,7 @@ on:
     branches:
       - feature/v17-design-to-purchase-studio
       - feature/one-capture-ai-vision-20261107
+      - feature/porch-infill-review-p0-20261107
   pull_request:
     branches:
       - main
