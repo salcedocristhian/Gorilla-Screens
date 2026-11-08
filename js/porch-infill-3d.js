@@ -117,10 +117,10 @@ function mount({host,project,photos}){
       const dx=(x0+x1)/2-dw/2,y0=bottom+.02,y1=y0+dh,z=.13;
       const door=addObject(new T.PlaneGeometry(dw,dh),doorMat,dx+dw/2,y0+dh/2,.055);
       door.renderOrder=4;
-      bar([dx,y0,z],[dx,y1,z],.032,frame);bar([dx+dw,y0,z],[dx+dw,y1,z],.032,frame);
-      bar([dx,y0,z],[dx+dw,y0,z],.027,frame);bar([dx,y1,z],[dx+dw,y1,z],.027,frame);
+      bar([dx,y0,z],[dx,y1,z],.032,frameMat);bar([dx+dw,y0,z],[dx+dw,y1,z],.032,frameMat);
+      bar([dx,y0,z],[dx+dw,y0,z],.027,frameMat);bar([dx,y1,z],[dx+dw,y1,z],.027,frameMat);
       // Hinge symbol and handle are intentionally schematic; door swing, latch and code are unverified.
-      bar([dx+dw*.87,y0+dh*.47,z+.08],[dx+dw*.87,y0+dh*.53,z+.08],.02,frame);
+      bar([dx+dw*.87,y0+dh*.47,z+.08],[dx+dw*.87,y0+dh*.53,z+.08],.02,frameMat);
     }
   }
   scene.add(new T.HemisphereLight(0xffffff,0x76818c,1.6));
