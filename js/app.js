@@ -247,7 +247,7 @@
     });
   }
 
-  function refreshHeader() { const q = Mo.quoteTotals(S.project); const t = $('.topbar .t'); if (t) t.innerHTML = `<b>${esc(S.project.address || 'Proyecto nuevo')}</b><span>${esc(S.project.client.name || 'Sin cliente')} · ${q.sqft.toFixed(1)} pie²</span>`; }
+  function refreshHeader() { const q = Mo.quoteTotals(S.project); const t = $('.topbar .t'); if (t) t.innerHTML = `<b>${esc(S.project.address || 'Proyecto nuevo')}</b><span>${esc(S.project.client.name || 'Sin cliente')} · ${q.sqft.toFixed(1)} pie²</span>`; const h=$('.fs-journey');if(FS&&h&&S.project){const tab=location.hash.split('/')[3]||'datos';h.outerHTML=FS.header(S.project,tab,S.photos);} }
 
   function mapLinks(p) {
     const a = encodeURIComponent(p.address || '');
@@ -392,6 +392,7 @@
           <label class="addph" aria-label="Agregar foto a ${esc(l)}">+<input type="file" accept="image/*" multiple data-cat="${k}"></label>
         </div>
       </section>`).join('');
+    refreshHeader();
     el.innerHTML=(FS?FS.photoGuide(p,S.photos):'')+visionCard(p)+
       (FS?'<details class="fs-advanced-media"><summary>Más fotografías · edición avanzada</summary>':'')+
       photoSections+(FS?'</details>':'');
