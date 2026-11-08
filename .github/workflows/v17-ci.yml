@@ -29,6 +29,8 @@ jobs:
           done
       - name: Syntax check for isolated AI Bridge Worker
         run: node --check cloudflare/gorilla-ai-bridge.mjs
+      - name: Site scene contract and reconstruction gateway
+        run: node tests/test_site_scene.mjs
       - name: Original model regression
         run: node tests/test_model.mjs
       - name: V17 geometry and procurement invariants
@@ -82,6 +84,8 @@ jobs:
         run: node tests/test_field_studio_browser.mjs
       - name: Gorilla AI Designer iPhone conversation and project persistence regression
         run: node tests/test_ai_designer_browser.mjs
+      - name: Site scene mobile reconstruction and editing (mocked Gemini)
+        run: node tests/test_site_scene_browser.mjs
       - name: One-app iPhone capture and honest progress regression
         run: node tests/test_visit_flow_browser.mjs
       - name: Save QA screenshots
@@ -98,6 +102,7 @@ jobs:
             qa-field-studio-*.png
             qa-ai-designer-*.png
             qa-visit-flow-*.png
+            qa-site-scene-*.png
           if-no-files-found: ignore
 
   package-static-preview:
@@ -124,8 +129,7 @@ jobs:
           if-no-files-found: error
       - name: Package separate AI Bridge Worker source
         run: |
-          cd cloudflare
-          zip -q "$GITHUB_WORKSPACE/gorilla-ai-bridge-worker.zip" gorilla-ai-bridge.mjs wrangler.bridge.json
+          zip -q "$GITHUB_WORKSPACE/gorilla-ai-bridge-worker.zip" cloudflare/gorilla-ai-bridge.mjs cloudflare/wrangler.bridge.json js/site-scene-contract.js
       - name: Upload gated Worker bundle
         uses: actions/upload-artifact@v4
         with:

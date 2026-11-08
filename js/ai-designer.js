@@ -195,7 +195,8 @@ function escOpts(choices,current){
  return choices.map(o=>'<button type="button" class="ad-choice '+(current===o.id?'chosen':'')+
   '" data-ad-answer="'+enc(o.id)+'">'+enc(o.label)+'<span aria-hidden="true">›</span></button>').join('');
 }
-function render({project,photos,host,save,navigate,notify}){
+function render({project,photos,host,save,navigate,notify,sceneAccess}){
+ host._sceneCleanup?.();
  const p=project,ev=evidence(p,photos),s=get(p,photos),q=next(p,photos),sum=summary(p,photos);
  const photo=photos.find(x=>x.projectId===p.id&&['frente','site','porche'].includes(x.cat));
  const markup='<section class="ad-shell">'+
@@ -227,13 +228,14 @@ function render({project,photos,host,save,navigate,notify}){
  (ev.missingViews.length?'<details class="ad-missing"><summary>Fotos adicionales sugeridas por Gemini</summary><ul>'+
  ev.missingViews.map(x=>'<li>'+enc(x)+'</li>').join('')+'</ul></details>':'')+'</section>';
  host.innerHTML=markup;
+ if(sceneAccess&&window.GSSSiteSceneView){const target=document.createElement('div');host.appendChild(target);host._sceneCleanup=GSSSiteSceneView.mount({project:p,photos,host:target,save,access:sceneAccess,notify});}
  host.querySelectorAll('[data-ad-answer]').forEach(b=>b.onclick=async()=>{
    host.querySelectorAll('[data-ad-answer]').forEach(x=>x.disabled=true);
-   try{answer(p,photos,q.id,b.dataset.adAnswer);await save();render({project:p,photos,host,save,navigate,notify});}
-   catch(err){notify?.(err.message);render({project:p,photos,host,save,navigate,notify});}
+   try{answer(p,photos,q.id,b.dataset.adAnswer);await save();render({project:p,photos,host,save,navigate,notify,sceneAccess});}
+   catch(err){notify?.(err.message);render({project:p,photos,host,save,navigate,notify,sceneAccess});}
  });
  host.querySelector('[data-ad-back]')?.addEventListener('click',async()=>{
-   try{back(p,photos);await save();render({project:p,photos,host,save,navigate,notify});}
+   try{back(p,photos);await save();render({project:p,photos,host,save,navigate,notify,sceneAccess});}
    catch(err){notify?.(err.message);}
  });
  host.querySelector('[data-ad-continue]')?.addEventListener('click',async()=>{

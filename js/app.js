@@ -278,9 +278,11 @@
   }
   function tabDisenador(el){
     if(!window.GSSAiDesigner){el.innerHTML='<div class="card">El diseñador IA no está disponible.</div>';return;}
+    const project=S.project;
     window.GSSAiDesigner.render({
-      project:S.project,photos:S.photos,host:el,
-      save:()=>St.saveProject(S.project).catch(err=>{toast('No se pudo guardar el brief del diseño.');throw err;}),notify:toast,
+      project,photos:S.photos,host:el,
+      sceneAccess:{getToken:()=>S.visionToken||'',setToken:v=>{S.visionToken=v;},getUrl:()=>S.visionEndpoint||GSSVisionAPI.DEFAULT_ENDPOINT,currentPhotos:()=>St.listPhotos(project.id)},
+      save:()=>St.saveProject(project).catch(err=>{toast('No se pudo guardar el diseño.');throw err;}),notify:toast,
       navigate:tab=>{location.hash='#/p/'+encodeURIComponent(S.project.id)+'/'+tab;}
     });
   }
