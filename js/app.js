@@ -307,9 +307,9 @@
       const oldFieldIntro=el.querySelector('.field-start');
       if(oldFieldIntro)oldFieldIntro.remove();
       el.insertAdjacentHTML('beforeend','<a class="btn block fs-client-next" href="#/p/'+p.id+'/fotos">Continuar a fotografías →</a>');
-      $('[data-fs-type]',el).forEach(b=>b.onclick=()=>{
+      $$('[data-fs-type]',el).forEach(b=>b.onclick=()=>{
         p.fieldType=b.dataset.fsType;
-        $('[data-fs-type]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+        $$('[data-fs-type]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
         saveSoon();
       });
     }
@@ -470,7 +470,7 @@
         tabFotos(el);
       }catch(err){toast(err.message||'No se pudo guardar el análisis.',6000);}
     };
-    $('input[data-guide-cat]',el).forEach(i=>i.onchange=async()=>{
+    $$('input[data-guide-cat]',el).forEach(i=>i.onchange=async()=>{
       const files=[...i.files];if(!files.length)return;
       const own=p.id;
       toast('Guardando '+files.length+' foto(s)…');
