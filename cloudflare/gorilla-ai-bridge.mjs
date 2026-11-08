@@ -42,13 +42,19 @@ function promptFor(count) {
     '"suggestedEnclosureDesign":[],"measurementsToVerify":[],"limitations":[],"siteGeometry":{'+
     '"photoCount":'+count+',"stories":null,"houseRoofType":"unknown","coveredPatio":null,'+
     '"poolPresent":null,"poolShape":"unknown","deckSurface":"unknown",'+
-    '"candidateAttachmentWalls":[],"facadeOpenings":[],"recommendedCaptureMissingViews":[],"contextConfidence":"low"}}}. '+
-    'For each clearly visible facade opening, record {id,type,description,evidencePhotoIndices,estimatedRelativePosition,confidence}; '+
-    'never invent widths, radii, heights or engineering approvals. '+
-    'Absence from photos is UNKNOWN, not false: in particular poolPresent=null if rear area unseen. '+
-    'Attachments are candidates only and structuralSuitability must be "unverified". '+
-    'For arches, count actual openings if possible and note uncertain count. '+
-    'Photos can have overlap; do not double count. Return only JSON, with no code fences.';
+    '"candidateAttachmentWalls":[],"facadeOpenings":[],"upperAttachmentZones":[],"recommendedCaptureMissingViews":[],"contextConfidence":"low"}}}. '+
+    'Identify EVERY distinct, clearly visible exterior opening on the SAME facade, especially arches in a covered front porch. '+
+    'Do not double count the SAME arch seen from different camera angles. '+
+    'Each facadeOpening is {id,type,description,evidencePhotoIndices,estimatedRelativePosition,confidence}, '+
+    'with a stable unique id, type "arch" for masonry arches, 1-based image indices, left/center/right/unknown relative position, and high/medium/low confidence. '+
+    'If masonry arches are clearly visible, facadeOpenings MUST NOT be empty. If uncertain, report uncertainty, never fabricate counts. '+
+    'Record visible upper-level gaps and soffit/fascia interfaces in upperAttachmentZones as '+
+    '{id,observation,evidencePhotoIndices,confidence,structuralSuitability:"unverified"}, never label gaps as approved anchors. '+
+    'For existing covered porches suggest Porch Infill ONLY as a human-review candidate instead of an unnecessary new Mansard roof. '+
+    'Never invent widths, radii, heights, engineering approval or an as-built 3D model. '+
+    'Absence from photos is UNKNOWN, not false, including poolPresent=null if rear area unseen. '+
+    'Attachments are candidates only; structuralSuitability is always "unverified". '+
+    'Return only JSON, no code fences.';
 }
 function parseGemini(body){
   const text=(body?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
