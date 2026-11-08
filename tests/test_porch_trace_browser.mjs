@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader']});
+const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+const errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+try{
+ await page.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded'});
+ await page.locator('[data-a="demo"]').click();
+ await page.locator('a[href$="/studio"]').click();
+ await page.locator('[data-v17-tab="trace"]').click();
+ await page.locator('[data-trace-start]').waitFor();
+ assert.equal(await page.locator('.v17-trace-svg').count(),0,'No arches added before explicit user approval');
+ await page.locator('[data-trace-start]').click();
+ await page.locator('.v17-trace-path').first().waitFor();
+ assert.equal(await page.locator('.v17-trace-path').count(),3,'Three provisional guides are provided for user refinement');
+ const initial=await page.locator('.v17-trace-path').first().getAttribute('d');
+ const grip=page.locator('.v17-trace-handle').first();
+ const box=await grip.boundingBox();
+ assert.ok(box,'Arch editing handle must be visible');
+ await page.mouse.move(box.x+box.width/2,box.y+box.height/2);
+ await page.mouse.down();
+ await page.mouse.move(box.x+box.width/2+14,box.y+box.height/2+5,{steps:5});
+ await page.mouse.up();
+ const changed=await page.locator('.v17-trace-path').first().getAttribute('d');
+ assert.notEqual(changed,initial,'Dragging handle updates editable arch outline');
+ await page.screenshot({path:'qa-v17-porch-trace-mobile.png',fullPage:true});
+ await page.waitForTimeout(450); // allow debounced project persistence
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('[data-v17-tab="trace"]').click();
+ await page.locator('.v17-trace-path').first().waitFor();
+ assert.equal(await page.locator('.v17-trace-path').first().getAttribute('d'),changed,'Arch draft persists on its own project');
+ await page.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded'});
+ await page.locator('[data-a="newphoto"]').click();
+ await page.locator('a[href$="/studio"]').click();
+ await page.locator('[data-v17-tab="trace"]').click();
+ await page.getByText('No hay fotografías de esta propiedad disponibles aquí.').waitFor();
+ assert.equal(await page.locator('.v17-trace-path').count(),0,'Second project does not see first-project arches');
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+5),true,'Porch Trace has no mobile horizontal overflow');
+ assert.deepEqual(errors,[],'No browser JS errors');
+ console.log('PASS V17 Porch Trace: mobile controls, persistence, photo/project isolation, non-destructive drafting');
+}finally{await browser.close();}
