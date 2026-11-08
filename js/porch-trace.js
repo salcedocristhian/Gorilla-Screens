@@ -87,7 +87,7 @@ function mount({project,photos,host,save,notify}){
       '<button class="btn" data-trace-start>Crear '+count+' guías editables · sin medidas</button></div>':
       '<div class="v17-trace-photo"><img src="'+esc(photo.url)+'" alt="Fotografía autorizada del proyecto"><svg class="v17-trace-svg" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-label="Contornos preliminares editables de arcos"></svg></div>'+
       '<p class="smalltext lead"><strong>Atención:</strong> las guías iniciales son ejemplos y pueden estar fuera de los arcos reales. No equivalen a detección automática.</p>'+
-      '<div class="v17-trace-position"><strong>'+draft.arches.filter(a=>a.photoAligned).length+' de '+draft.arches.length+' aberturas ubicadas sobre la foto</strong>'+
+      '<div class="v17-trace-position" data-active="'+String(!!placement)+'"><strong>'+draft.arches.filter(a=>a.photoAligned).length+' de '+draft.arches.length+' aberturas ubicadas sobre la foto</strong>'+
       '<p data-trace-place-tip aria-live="polite">'+(placement?placeTip():'Usa 3 clics por arco para definir la corona y las dos bases. Después ajusta los círculos.')+'</p>'+
       '<button type="button" class="btn sec" data-trace-place>'+(placement?'Cancelar ubicación':'📍 Ubicar arcos reales (3 clics por arco)')+'</button></div>'+
       '<p class="smalltext lead">Ajuste fino: arrastra los círculos del arco seleccionado. Las ubicaciones son referencia visual, no cotas.</p>'+
@@ -192,6 +192,16 @@ function mount({project,photos,host,save,notify}){
           }
         }
         e.preventDefault();
+        if(placement&&placement.points.length){
+          // Keep WebGL alive during each set of guide taps; only rebuild after a complete arch.
+          let marks=svg.querySelector('[data-trace-guide-marks]');
+          if(!marks){marks=document.createElementNS('http://www.w3.org/2000/svg','g');marks.setAttribute('data-trace-guide-marks','');svg.appendChild(marks);}
+          marks.innerHTML=placement.points.map((p,i)=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="12" fill="#fff" stroke="#0786f2" stroke-width="5"/>'+
+            '<text x="'+(p.x+18)+'" y="'+(p.y-10)+'" fill="#fff" stroke="#153044" stroke-width="4" paint-order="stroke">'+['Corona','Base izquierda','Base derecha'][i]+'</text>').join('');
+          const tip=host.querySelector('[data-trace-place-tip]');
+          if(tip)tip.textContent=placeTip();
+          return;
+        }
         render();return;
       }
       const h=e.target.closest('[data-handle]');
