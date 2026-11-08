@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const ctx={window:{},Math,Date,Number,String,Array,JSON};
+vm.createContext(ctx);
+for(const f of ['porch-trace.js','porch-infill-3d.js']){
+ vm.runInContext(fs.readFileSync(new URL('../js/'+f,import.meta.url),'utf8'),ctx);
+}
+const T=ctx.window.GSSPorchTrace, R=ctx.window.GSSPorchInfill3D;
+const o=T.cleanArch({id:'arch-1',left:300,right:410,top:410,spring:520,bottom:675,crown:357,photoAligned:true,measuredHeight:8},0);
+assert.equal(o.photoAligned,true,'User photo placement is preserved through normalization');
+assert.equal(o.measuredHeight,undefined,'A visual guide must not become a verified dimension');
+assert.equal(o.structuralSuitability,'unverified');
+const p={id:'site-a',porchTrace:{projectId:'site-a',photoId:'p1',arches:[o]}};
+const photos=[{id:'p1',projectId:'site-a',url:'blob:a'}];
+const model=R.fromTrace(p,photos);
+assert.equal(model.arches[0].photoAligned,true);
+assert.equal(model.roofAdded,false,'Existing covered porch never generates new roof');
+assert.equal(model.takeoffEligible,false);
+assert.equal(model.dimensionsVerified,false);
+assert.equal(R.fromTrace(p,[{id:'p1',projectId:'site-b',url:'blob:b'}]),null,'Other house cannot receive photo match');
+const trace=fs.readFileSync(new URL('../js/porch-trace.js',import.meta.url),'utf8');
+assert.ok(trace.includes('data-trace-place'),'Three-click placement control exists');
+assert.ok(trace.includes('data-trace-place-tip'),'Placement instructions update live');
+assert.ok(trace.includes('v17-porch-match'),'Real-photo screen overlay exists');
+assert.ok(trace.includes('photoAligned:true'),'A real guided placement is distinguished from seed guides');
+const render=fs.readFileSync(new URL('../js/porch-infill-3d.js',import.meta.url),'utf8');
+assert.ok(render.includes('requiredDistance'),'3D framing fits actual viewport');
+assert.ok(render.includes("host.dataset.photoAligned"),'3D exposes whether photo positions are adjusted');
+console.log('PASS porch alignment: user-photo placement, source isolation, photo match, no inferred measures, no added roof');
