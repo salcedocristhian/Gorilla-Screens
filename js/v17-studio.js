@@ -341,10 +341,10 @@ function mount({project,photos,host,save,notify}){
    const detailsWasOpen=host.querySelector('.v17-site-more')?.open===true;
    if(previousPreview){previousPreview.destroy();previousPreview=null;}
    const r=E.takeoff(s);
-   const body={design:()=>design(s,r,project,photos),match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project));
+   const body={design:()=>design(s,r,project,photos),trace:()=>'<div id="v17-porch-trace"></div>',match:()=>photo(s,photos),docs:()=>deliverables(s,r,photos),buy:()=>purchasing(s,r,project)}[active]||(()=>design(s,r,project));
    host.innerHTML='<div class="v17-shell"><header class="v17-heading"><div><div class="cap">GORILLA SCREEN STUDIO · V17 WORKSPACE</div><h1>Design to Purchase</h1><p class="lead">Diseña, presenta, calcula y prepara compras — sin perder el control humano.</p></div><span class="v17-beta">FIELD PILOT</span></header>'+
     '<nav class="v17-nav" aria-label="Studio sections">'+[
-    ['design','▧','Design'],['match','◐','Photo Match'],['docs','▤','Deliverables'],['buy','▦','Takeoff & Order']
+    ['design','▧','Design'],['trace','⌒','Porch Trace'],['match','◐','Photo Match'],['docs','▤','Deliverables'],['buy','▦','Takeoff & Order']
    ].map(x=>'<button data-v17-tab="'+x[0]+'" '+(active===x[0]?'aria-current="page"':'')+'><span>'+x[1]+'</span>'+x[2]+'</button>').join('')+'</nav>'+body()+'</div>';
    if(detailsWasOpen&&host.querySelector('.v17-site-more'))host.querySelector('.v17-site-more').open=true;
    host.querySelectorAll('[data-v17-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.v17Tab;render();});
@@ -433,6 +433,7 @@ function mount({project,photos,host,save,notify}){
       }catch(ex){tell(ex.message||'Operation could not be completed.');}
       finally{b.disabled=false;}
    });
+   if(active==='trace'&&window.GSSPorchTrace)window.GSSPorchTrace.mount({project,photos,host:host.querySelector('#v17-porch-trace'),save:store,notify:tell});
    if(active==='design'&&r.geometry.valid&&window.GSSV17Preview){
       try{previousPreview=window.GSSV17Preview.mount(host.querySelector('#v17-preview'),s,photos.find(x=>x.id===s.site?.photoId));}
       catch(e){console.warn('V17 preview unavailable',e); const stage=host.querySelector('#v17-preview');if(stage)stage.textContent='Vista 3D no disponible. Cálculos y documentos siguen accesibles.';}

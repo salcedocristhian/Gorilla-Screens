@@ -5,6 +5,7 @@ on:
       - feature/v17-design-to-purchase-studio
       - feature/one-capture-ai-vision-20261107
       - feature/porch-infill-review-p0-20261107
+      - feature/porch-infill-trace-p0-20261107
   pull_request:
     branches:
       - main
@@ -29,6 +30,8 @@ jobs:
         run: node tests/test_v17.mjs
       - name: AI Vision project isolation and JSON contract
         run: node tests/test_vision.mjs
+      - name: Porch Infill visual tracing project-scope and nonmeasured guarantees
+        run: node tests/test_porch_trace.mjs
       - name: Single-capture API client
         run: node tests/test_vision_api.mjs
       - name: Authenticated Gemini bridge security
@@ -54,6 +57,8 @@ jobs:
         run: node tests/test_ai_browser.mjs
       - name: Single capture mobile browser regression
         run: node tests/test_one_capture_browser.mjs
+      - name: Porch Infill mobile tracing and persistence regression
+        run: node tests/test_porch_trace_browser.mjs
       - name: Save QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -62,6 +67,7 @@ jobs:
           path: |
             qa-v17-mobile-*.png
             qa-onecapture-*.png
+            qa-v17-porch-trace-*.png
           if-no-files-found: ignore
 
   package-static-preview:

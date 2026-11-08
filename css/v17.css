@@ -6,7 +6,7 @@
 .v17-beta,.v17-pill{border:1px solid var(--line);background:var(--field);border-radius:100px;color:var(--sub);font-size:11px;font-weight:700;letter-spacing:.025em;padding:7px 10px;white-space:nowrap}
 .v17-pill{font-size:10px}.v17-success{color:var(--ok);border-color:var(--ok)}
 .v17-warning{color:var(--warn);border-color:var(--warn)}
-.v17-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;border-radius:18px;background:var(--seg);padding:5px;margin-bottom:16px}
+.v17-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;border-radius:18px;background:var(--seg);padding:5px;margin-bottom:16px}
 .v17-nav button{background:transparent;border:0;min-height:52px;border-radius:14px;font-size:13px;font-weight:600;color:var(--sub);display:flex;justify-content:center;align-items:center;gap:6px}
 .v17-nav button[aria-current="page"]{background:var(--card);box-shadow:0 1px 5px rgba(0,0,0,.07);color:var(--text)}
 .v17-nav button span{font-size:19px;font-weight:400}
@@ -105,3 +105,21 @@
 .v17-site-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--sub)}
 .v17-attach-warning{border:1px solid #c7883c;color:var(--text)}
 @media(max-width:420px){.v17-site-header{align-items:flex-start}.v17-site-switch{font-size:11px}.v17-site-primary{gap:9px}.v17-site-thumb{width:65px;height:62px}}
+
+/* Project-local Porch Infill photo tracing. No 3D/takeoff geometry is modified. */
+.v17-trace-card{max-width:970px;margin:0 auto;padding:18px}
+.v17-trace-card>.v17-field{margin:14px 0}
+.v17-trace-setup{border:1px dashed var(--line);padding:18px;border-radius:14px;margin:15px 0}
+.v17-trace-photo{position:relative;width:100%;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--field);margin:12px auto}
+.v17-trace-photo img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+.v17-trace-svg{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;overflow:visible}
+.v17-trace-path{fill:rgba(12,129,240,.09);stroke:#0786f2;stroke-width:4;stroke-dasharray:10 8;vector-effect:non-scaling-stroke;cursor:pointer}
+.v17-trace-path.selected{fill:rgba(12,129,240,.18);stroke-width:5;stroke-dasharray:none}
+.v17-trace-handle{fill:#fff;stroke:#087cf0;stroke-width:5;vector-effect:non-scaling-stroke;cursor:move}
+.v17-trace-text{font-size:33px;font-weight:750;fill:#fff;paint-order:stroke;stroke:#153044;stroke-width:7px;pointer-events:none}
+.v17-trace-list{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 13px}
+.v17-trace-list button{border:1px solid var(--line);border-radius:9px;background:var(--field);color:var(--text);padding:8px 11px;font-size:12px}
+.v17-trace-list button[aria-pressed=true]{background:var(--accent);color:#fff}
+.v17-trace-card .v17-btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.v17-trace-card .v17-btnrow .btn{width:auto;min-height:40px}
+@media(max-width:520px){.v17-nav button{font-size:9px}.v17-trace-card{padding:12px}.v17-trace-card .v17-btnrow .btn{flex:1 1 auto}.v17-trace-text{font-size:38px}}

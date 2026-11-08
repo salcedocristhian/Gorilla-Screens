@@ -174,6 +174,8 @@
       if(p.studioV17?.match?.after)p.studioV17.match.after=idMap[p.studioV17.match.after]||'';
       // AI evidence belongs to the newly imported project; never retain old photo ownership.
       if(p.aiVision){p.aiVision.projectId=p.id;p.aiVision.photoIds=Array.isArray(p.aiVision.photoIds)?p.aiVision.photoIds.map(id=>idMap[id]).filter(Boolean):[];p.aiVision.reviewed=false;}
+      // Porch tracings are photo-relative; never reuse a source ID across imported properties.
+      if(p.porchTrace){p.porchTrace.projectId=p.id;p.porchTrace.photoId=idMap[p.porchTrace.photoId]||'';p.porchTrace.status='draft-needs-human-review';p.porchTrace.verified=false;if(!p.porchTrace.photoId)delete p.porchTrace;}
 
       await St.saveProject(p); for(const ph of parsedPhotos)await St.savePhoto(ph);
       location.hash = '#/p/' + p.id + '/datos';
@@ -634,7 +636,7 @@
     } catch (e) { console.error(e); toast('No se pudo generar el plano'); }
     busy(el, false);
   }
-  function shareURL(withPrice) { const p = JSON.parse(JSON.stringify(S.project)); p._company = company(); delete p.geo; delete p.aiVision; if (!withPrice) { p.quote.rate = 0; p.quote.extras = []; p.quote.hidePrice = true; } return location.href.split('#')[0] + '#/cliente/' + Mo.encodeShare(p); }
+  function shareURL(withPrice) { const p = JSON.parse(JSON.stringify(S.project)); p._company = company(); delete p.geo; delete p.aiVision; delete p.porchTrace; if (!withPrice) { p.quote.rate = 0; p.quote.extras = []; p.quote.hidePrice = true; } return location.href.split('#')[0] + '#/cliente/' + Mo.encodeShare(p); }
   function tabEntregar(el) {
     const p = S.project;
     el.innerHTML = `
