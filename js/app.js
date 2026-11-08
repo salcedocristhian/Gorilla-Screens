@@ -2,6 +2,8 @@
 (function () {
   const Mo = window.GSSModel, St = window.GSSStore;
   const app = document.getElementById('app');
+  const FS = window.GSSFieldUI;
+  document.body.classList.add('fs-ui');
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const $ = (sel, el) => (el || document).querySelector(sel);
   const $$ = (sel, el) => [...(el || document).querySelectorAll(sel)];
@@ -21,7 +23,11 @@
   const PHOTO_CATS = [
     ['aerea', 'Vista aérea', 'Imagen aérea autorizada o fotografía propia. Se muestra en el plano de ubicación.'],
     ['street', 'Vista desde la calle', 'Fotografía propia o referencia con derechos de uso.'],
+    ['site', 'Fotos del análisis AI Vision', 'Fotos capturadas en el proyecto para el mismo análisis.'],
     ['frente', 'Frente de la casa', 'Foto completa del frente, de esquina a esquina.'],
+    ['west', 'West / elevación izquierda', 'Vista completa del lado oeste o izquierdo, tomada desde el exterior.'],
+    ['east', 'East / elevación derecha', 'Vista completa del lado este o derecho, tomada desde el exterior.'],
+    ['south', 'South / elevación posterior', 'Vista completa de la fachada posterior, patio y conexión a la casa.'],
     ['openings', 'Cada opening', 'Una foto de frente por opening, con la cinta métrica visible si puedes.'],
     ['porche', 'Porche / interior', 'Desde adentro, mirando a los lados: puerta, ventana, luz, piso.'],
     ['detalles', 'Fascia, gutters y downspout', 'Fascia, gutters existentes, downspout y techo.'],
@@ -29,7 +35,7 @@
   ];
   const VIEWS = [['frente', 'Frente'], ['izq', 'Lado izq.'], ['der', 'Lado der.'], ['arcos', 'Openings'], ['top', 'Techo'], ['porche', 'Porche'], ['aerea', 'Aérea']];
 
-  let S = { project: null, photos: [], viewer: null, builtFor: '', view: 'frente', after: true, land: true, palms: false, logoData: null, saveT: null };
+  let S = { project: null, photos: [], viewer: null, builtFor: '', view: 'frente', after: true, land: true, palms: false, logoData: null, saveT: null, visionDrafts: new Map(), visionSelections: new Map(), visionToken: '', visionEndpoint: '' };
 
   // ---------- utilities
   let toastT; function toast(t, ms) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), ms || 2600); }
@@ -86,8 +92,11 @@
   function parkViewer() { if (S.viewer) S.viewer.mount($('#offscreen')); }
 
   // ---------- router
+  let routeGeneration=0;
   window.addEventListener('hashchange', route);
+  app.addEventListener('click',event=>{const jump=event.target.closest('[data-fs-go]');if(jump&&S.project){event.preventDefault();location.hash='#/p/'+S.project.id+'/'+jump.dataset.fsGo;}});
   async function route() {
+    const generation=++routeGeneration;
     const h = location.hash.replace(/^#\/?/, '');
     const parts = h.split('/');
     parkViewer();
@@ -95,15 +104,23 @@
     if (parts[0] === 'p' && parts[1]) {
       if (!S.project || S.project.id !== parts[1]) {
         const p = await St.getProject(parts[1]);
+        if (generation!==routeGeneration) return;
         if (!p) { location.hash = '#/'; return; }
-        S.project = Mo.normalize(p); S.builtFor = ''; S.view='frente'; S.after=true; await loadPhotos();
+        S.project = Mo.normalize(p); S.builtFor = ''; S.view='frente'; S.after=true; await loadPhotos(p.id);
+        if (generation!==routeGeneration) return;
       }
       return projectView(parts[2] || 'datos');
     }
     if (parts[0] === 'ajustes') return settingsView();
     return homeView();
   }
-  async function loadPhotos() { S.photos.forEach(p => p.url && URL.revokeObjectURL(p.url)); S.photos = (await St.listPhotos(S.project.id)).map(p => Object.assign(p, { url: URL.createObjectURL(p.blob) })); }
+  async function loadPhotos(projectId=S.project?.id) {
+    if (!projectId) return;
+    const records=await St.listPhotos(projectId);
+    if (S.project?.id!==projectId) return;
+    S.photos.forEach(p=>p.url&&URL.revokeObjectURL(p.url));
+    S.photos=records.map(p=>Object.assign(p,{url:URL.createObjectURL(p.blob)}));
+  }
 
   function topbar(title, subtitle, left, right) {
     return `<header class="topbar">${left || `<img src="${LOGO}" alt="Gorilla Screening Solutions">`}<div class="t"><b>${esc(title)}</b>${subtitle ? `<span>${esc(subtitle)}</span>` : ''}</div>${right || ''}</header>`;
@@ -113,16 +130,17 @@
   async function homeView() {
     document.title = 'Gorilla Screens · Proyectos';
     const list = await St.listProjects();
-    app.innerHTML = topbar('Gorilla Screens', 'Proyectos de screens', '', `<a class="iconbtn" href="#/ajustes" aria-label="Ajustes de la compañía">${IC.gear}</a>`) + `
-      <main class="wrap">
-        <h1 class="h1">Proyectos</h1>
-        <p class="lead">Para campo: fotografías → dibujo → medidas verificadas → 3D y plano.</p>
+    app.innerHTML = topbar('Field Studio', 'Gorilla Screening Solutions LLC', '', `<a class="iconbtn" href="#/ajustes" aria-label="Ajustes de la compañía">${IC.gear}</a>`) + `
+      <main class="wrap fs-home">
+        ${FS ? FS.introHome() : ''}
+        <div class="fs-home-label">Nueva visita</div>
         <div class="home-tools" style="margin-bottom:14px">
           <label class="field project-search"><span class="sr-only">Filtrar proyectos</span><input id="projectFilter" type="search" placeholder="⌕  Buscar proyectos" aria-label="Buscar proyectos"></label>
           <button class="iconbtn tool-plus" data-a="new" aria-label="Crear nuevo proyecto" title="Nuevo proyecto">+</button>
           <label class="iconbtn tool-upload" title="Importar proyecto" aria-label="Importar proyecto">⇧<input type="file" accept=".json,application/json" data-a="import"></label>
         </div>
-        <div class="card field-start"><div class="row"><span class="l"><b>Desde fotografías</b><br><span class="sub">Crea un proyecto vacío, toma fotos y traza tu propio diseño.</span></span><span class="field-steps">01 → 02 → 03</span></div><button class="btn block" data-a="newphoto">+ Proyecto desde fotos</button></div>
+        <button class="fs-visit-start" data-a="newphoto" style="all:unset;cursor:pointer;display:block;width:100%;margin-bottom:22px" aria-label="Crear nueva visita">${FS ? FS.homeStart() : '<div class="card">+ Nueva visita</div>'}</button>
+        <div class="fs-home-label">Proyectos recientes</div>
         ${St.usingMemory() ? '<p class="warn">Este navegador no permite guardar en el dispositivo (modo privado). Los proyectos se perderán al cerrar.</p>' : ''}
         <div class="plist">
           ${list.map(p => { const q = Mo.quoteTotals(Mo.normalize(p)); return `<a class="pitem" href="#/p/${esc(p.id)}/datos" style="text-decoration:none;color:inherit"><img class="thumb" src="${LOGO}" alt=""><div style="min-width:0"><b>${esc(p.address || 'Sin dirección')}</b><span>${esc(p.client && p.client.name || 'Sin cliente')} · ${Mo.hasApprovedGeometry(p) || p.kind!=='field' ? q.sqft.toFixed(0)+' pie²' : 'Geometría pendiente'}${p.quote?.rate>0 && q.sqft>0 ? ' · '+Mo.money(q.total) : ''}</span><span>Actualizado ${new Date(p.updatedAt).toLocaleDateString('es-US')}</span></div></a>`; }).join('') || '<div class="card sub">Todavía no hay proyectos.</div>'}
@@ -158,6 +176,10 @@
       if(p.studioV17?.site?.photoId)p.studioV17.site.photoId=idMap[p.studioV17.site.photoId]||'';
       if(p.studioV17?.match?.before)p.studioV17.match.before=idMap[p.studioV17.match.before]||'';
       if(p.studioV17?.match?.after)p.studioV17.match.after=idMap[p.studioV17.match.after]||'';
+      // AI evidence belongs to the newly imported project; never retain old photo ownership.
+      if(p.aiVision){p.aiVision.projectId=p.id;p.aiVision.photoIds=Array.isArray(p.aiVision.photoIds)?p.aiVision.photoIds.map(id=>idMap[id]).filter(Boolean):[];p.aiVision.reviewed=false;}
+      // Porch tracings are photo-relative; never reuse a source ID across imported properties.
+      if(p.porchTrace){p.porchTrace.projectId=p.id;p.porchTrace.photoId=idMap[p.porchTrace.photoId]||'';p.porchTrace.status='draft-needs-human-review';p.porchTrace.verified=false;if(!p.porchTrace.photoId)delete p.porchTrace;}
 
       await St.saveProject(p); for(const ph of parsedPhotos)await St.savePhoto(ph);
       location.hash = '#/p/' + p.id + '/datos';
@@ -180,19 +202,22 @@
     const p = S.project;
     document.title = (p.address || 'Proyecto') + ' · Gorilla Screens';
     const q = Mo.quoteTotals(p);
-    app.innerHTML = topbar(p.address || 'Proyecto nuevo', (p.client.name || 'Sin cliente') + ' · ' + q.sqft.toFixed(1) + ' pie²', `<a class="iconbtn" href="#/" aria-label="Volver a proyectos">${IC.back}</a>`) +
-      `<nav class="tabbar" aria-label="Secciones del proyecto">${TABS.map(([k, l]) => `<a href="#/p/${esc(p.id)}/${k}" ${(['editor','roof','parts'].includes(tab) ? k === 'medidas' : k === tab) ? 'aria-current="page"' : ''}>${IC[k]}<span>${l}</span></a>`).join('')}</nav>
-       <main class="wrap" id="tab"></main>`;
+    app.innerHTML = topbar(p.address || 'Proyecto nuevo', (p.client.name || 'Sin cliente') + ' · ' + (q.sqft>0?q.sqft.toFixed(1) + ' pie²':'Visita en progreso'), `<a class="iconbtn" href="#/" aria-label="Volver a proyectos">${IC.back}</a>`) +
+      (FS ? FS.header(p,tab)+FS.bottom(p,tab) :
+      `<nav class="tabbar" aria-label="Secciones del proyecto">${TABS.map(([k, l]) => `<a href="#/p/${esc(p.id)}/${k}">${IC[k]}<span>${l}</span></a>`).join('')}</nav>`) +
+      `<main class="wrap fs-project" id="tab"></main>`;
     const el = $('#tab');
     if (tab === 'editor') { return tabEditor(el); }
     if (tab === 'roof') { return tabRoof(el); }
     if (tab === 'parts') { return tabParts(el); }
-    ({ datos: tabDatos, fotos: tabFotos, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
+    ({ datos: tabDatos, fotos: tabFotos, aerea: tabAerea, analisis: tabAnalisis, disenador: tabDisenador, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
+    if(FS && tab!=='studio' && ['medidas','3d'].includes(tab))el.insertAdjacentHTML('afterbegin',FS.more(p,tab));
     window.scrollTo(0, 0);
   }
   function tabStudio(el) {
     if (!window.GSSV17) { el.innerHTML='<div class="card">V17 Studio no disponible.</div>'; return; }
-    window.GSSV17.mount({project:S.project,photos:S.photos,host:el,save:saveSoon,notify:toast});
+    if(FS)el.innerHTML=FS.studio(S.project,S.photos)+FS.more(S.project,'studio')+'<div id="fs-v17-workspace"></div>';
+    window.GSSV17.mount({project:S.project,photos:S.photos,host:FS?el.querySelector('#fs-v17-workspace'):el,save:saveSoon,notify:toast});
   }
 
   function tabEditor(el) {
@@ -233,6 +258,32 @@
       embed: `https://maps.google.com/maps?q=${a}&t=k&z=20&ie=UTF8&iwloc=&output=embed`
     };
   }
+  function tabAerea(el){
+    const p=S.project;
+    el.innerHTML=FS?FS.aerial(p,S.photos,mapLinks(p)):'<div class="card">Vista aérea no disponible.</div>';
+    const input=$('[data-field-aerial]',el);
+    if(input)input.onchange=async()=>{
+      const file=input.files?.[0];if(!file)return;
+      try{
+        const b=await resizeImage(file,1600);
+        await St.savePhoto({id:Mo.uid(),projectId:p.id,cat:'aerea',blob:b,createdAt:Date.now()});
+        if(S.project?.id!==p.id)return;
+        await loadPhotos(p.id);
+        if(S.project?.id===p.id){tabAerea(el);toast('Vista aérea guardada en este proyecto.');}
+      }catch(err){toast('No se pudo guardar la imagen aérea.');}
+    };
+  }
+  function tabAnalisis(el){
+    el.innerHTML=FS?FS.analysis(S.project,S.photos):'<div class="card">Consulta el análisis en Fotos.</div>';
+  }
+  function tabDisenador(el){
+    if(!window.GSSAiDesigner){el.innerHTML='<div class="card">El diseñador IA no está disponible.</div>';return;}
+    window.GSSAiDesigner.render({
+      project:S.project,photos:S.photos,host:el,
+      save:()=>St.saveProject(S.project).catch(err=>{toast('No se pudo guardar el brief del diseño.');throw err;}),notify:toast,
+      navigate:tab=>{location.hash='#/p/'+encodeURIComponent(S.project.id)+'/'+tab;}
+    });
+  }
   function tabDatos(el) {
     const p = S.project, m = mapLinks(p);
     el.innerHTML = `
@@ -259,6 +310,17 @@
         <div class="field"><label for="nt">Notas internas</label><textarea id="nt">${esc(p.notes)}</textarea></div>
         <button class="btn danger block" data-a="del">Borrar proyecto</button>
       </div>`;
+    if(FS){
+      el.insertAdjacentHTML('afterbegin',FS.client(p));
+      const oldFieldIntro=el.querySelector('.field-start');
+      if(oldFieldIntro)oldFieldIntro.remove();
+      el.insertAdjacentHTML('beforeend','<a class="btn block fs-client-next" href="#/p/'+p.id+'/fotos">Continuar a fotografías →</a>');
+      $$('[data-fs-type]',el).forEach(b=>b.onclick=()=>{
+        p.fieldType=b.dataset.fsType;
+        $$('[data-fs-type]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+        saveSoon();
+      });
+    }
     $$('[data-mapmode]',el).forEach(b => b.onclick=()=>{ $$('[data-mapmode]',el).forEach(x=>x.setAttribute('aria-pressed',String(x===b))); const url=b.dataset.mapmode==='street'?m.street:m.sat; const target=$('#openSelectedMap',el); if(target)target.href=url; });
     $('#addr').oninput = e => { p.address = e.target.value; p.geo = null; saveSoon(); refreshHeader(); };
     $('#addr').onchange = () => tabDatos(el);
@@ -278,9 +340,48 @@
     $('[data-a="del"]').onclick = async () => { if (!confirm('¿Borrar este proyecto y sus fotos?')) return; await St.deleteProject(p.id); S.project = null; location.hash = '#/'; };
   }
 
+  // AI Vision is intentionally a human-reviewed import from the private same-origin /pilot.
+  // The public GitHub Pages app NEVER uploads client photos or stores the Gemini API key.
+  function visionCard(p) {
+    const a=p.aiVision, valid=a&&window.GSSVision&&GSSVision.belongsTo(a,p.id,S.photos);
+    const initial=S.visionSelections.get(p.id);
+    const picked=initial|| (window.GSSAiDesigner?.recommendedPhotos(p.id,S.photos)|| (S.photos.length<=5?S.photos.map(ph=>ph.id):[]));
+    const list=(title,items)=>items?.length?'<div class="pad"></div><b>'+esc(title)+'</b><ul>'+items.slice(0,12).map(v=>'<li>'+esc(v)+'</li>').join('')+'</ul>':'';
+    const result=a?'<div class="card" style="background:var(--surface,#f5f5f7)"><div class="cap">AI ANALYSIS · PENDING HUMAN REVIEW</div>'+
+      '<p class="lead">Modelo: '+esc(a.model)+' · '+(valid?'Evidencia vinculada al proyecto':'⚠ Faltan fotos de evidencia')+'</p>'+
+      (valid?'':'<p class="warn">Este resultado tiene referencias a fotografías eliminadas o externas. Repite la vinculación antes de usarlo.</p>')+
+      list('Elementos de la casa',a.findings?.visibleHouseFeatures)+
+      list('Fascia / attachment',a.findings?.fasciaAndAttachmentObservations)+
+      list('Revisar en campo',a.findings?.measurementsToVerify)+
+      list('Limitaciones',a.findings?.limitations)+
+      list('Alertas',a.warnings)+
+      '<p class="lead smalltext">Este análisis no cambia medidas, openings, modelo 3D ni takeoff.</p>'+
+      '<a class="btn sec block" href="#/p/'+esc(p.id)+'/studio" style="text-decoration:none">Abrir Studio →</a></div>':'';
+    const status=S.photos.length?
+      'Selecciona entre 1 y 5 fotos de esta propiedad. Si acabas de capturarlas aquí, ya estarán seleccionadas.' :
+      'Primero captura las fotos aquí mismo; se guardarán en este proyecto, no tendrás que repetir la carga.';
+    return '<section class="card" aria-label="AI Vision project analysis"><div class="cap">GORILLA AI VISION · CAPTURA ÚNICA</div>'+
+      '<h2>Fotografiar → Analizar → Studio 3D</h2>'+
+      '<p class="lead">Toma o selecciona hasta cinco fotos una sola vez. Se guardan en este proyecto y el resultado de Gemini se guarda automáticamente. No necesitas abrir otra página ni copiar JSON.</p>'+
+      '<label class="btn sec block" style="display:block;text-align:center;cursor:pointer">📷 Capturar / seleccionar fotos (1–5)<input type="file" accept="image/*" multiple data-ai-quick-files style="position:absolute;opacity:0;width:1px;height:1px" aria-label="Capturar o seleccionar fotos para AI Vision"></label>'+
+      '<p class="lead smalltext">'+esc(status)+'</p>'+
+      '<div style="max-height:240px;overflow:auto">'+S.photos.map(ph=>'<label style="display:flex;align-items:center;gap:10px;padding:8px 0"><input type="checkbox" data-ai-photo value="'+esc(ph.id)+'" '+(picked.includes(ph.id)?'checked':'')+'><span>'+esc(ph.cat)+' · '+new Date(ph.createdAt).toLocaleDateString('en-US')+'</span></label>').join('')+'</div>'+
+      '<div class="field"><label for="vision-token">Clave privada de AI Vision (piloto)</label><input type="password" id="vision-token" autocomplete="off" placeholder="Clave configurada en Cloudflare"><p class="lead smalltext">Se mantiene solo en memoria mientras la aplicación está abierta. La clave de Gemini nunca llega al teléfono.</p></div>'+
+      '<label style="display:flex;align-items:flex-start;gap:9px;padding:9px 0"><input id="vision-authorized" type="checkbox"><span>Confirmo que tengo autorización para enviar estas fotografías a Gemini y que pertenecen al proyecto actual.</span></label>'+
+      '<button class="btn block" data-a="vision-analyze">Analizar fotos con IA → Guardar en este proyecto</button>'+
+      '<p id="vision-live-status" role="status" aria-live="polite" class="lead smalltext"></p>'+
+      '<details class="card" style="margin-top:14px"><summary>Configuración avanzada / importar JSON anterior</summary>'+
+      '<div class="field"><label for="vision-endpoint">URL del Worker AI Bridge</label><input id="vision-endpoint" type="url" autocomplete="off" spellcheck="false"></div>'+
+      '<p class="lead smalltext">El análisis automático requiere un Worker autenticado y autorizado para esta dirección web. No uses el piloto público sin autenticación.</p>'+
+      '<a class="btn sec block" href="https://gorilla-ai-vision.salcedo-cristhian-2020.workers.dev/pilot" target="_blank" rel="noopener noreferrer" style="text-decoration:none">Abrir piloto anterior (alternativa)</a>'+
+      '<div class="field"><label for="vision-json">Pegar JSON anterior</label><textarea id="vision-json" rows="5" placeholder="Solo para resultados anteriores del piloto"></textarea></div>'+
+      '<button class="btn sec block" data-a="vision-import">Guardar JSON anterior</button></details>'+
+      result+'</section>';
+  }
+
   function tabFotos(el) {
     const p=S.project, by = c => S.photos.filter(x => x.cat === c);
-    el.innerHTML = PHOTO_CATS.map(([k, l, h]) => `
+    const photoSections = PHOTO_CATS.map(([k, l, h]) => `
       <section class="card" aria-labelledby="h-${k}">
         <div class="row" style="min-height:0"><b id="h-${k}" style="font-size:16px">${l}</b><span class="sub">${by(k).length || ''}</span></div>
         <p class="lead" style="margin:4px 0 0;font-size:14px">${h}</p>
@@ -289,11 +390,114 @@
           <label class="addph" aria-label="Agregar foto a ${esc(l)}">+<input type="file" accept="image/*" multiple data-cat="${k}"></label>
         </div>
       </section>`).join('');
-    if(p.kind==='field'){el.insertAdjacentHTML('afterbegin',`<section class="card field-start"><div class="cap">PASO 2 · FOTOGRAFÍAS</div><h2>Captura la propiedad real</h2><p class="lead">Toma el frente, cada opening, la fascia y el techo. Después toca ✎ Plano en una foto para trazar el dibujo y verificar dimensiones.</p><a class="btn sec block" href="#/p/${p.id}/editor" style="text-decoration:none">Abrir dibujo 2D</a><p class="lead smalltext">El reconocimiento automático con IA todavía no está conectado. Ninguna dimensión se inventará a partir de la imagen.</p></section>`);}
+    el.innerHTML=(FS?FS.photoGuide(p,S.photos):'')+visionCard(p)+
+      (FS?'<details class="fs-advanced-media"><summary>Más fotografías · edición avanzada</summary>':'')+
+      photoSections+(FS?'</details>':'');
+    const selection=()=>$$('[data-ai-photo]:checked',el).map(x=>x.value);
+    $$('[data-ai-photo]',el).forEach(i=>i.onchange=()=>S.visionSelections.set(p.id,selection()));
+    const tokenField=$('#vision-token',el);
+    tokenField.value=S.visionToken||'';
+    tokenField.oninput=()=>{S.visionToken=tokenField.value;};
+    const endpointField=$('#vision-endpoint',el);
+    endpointField.value=S.visionEndpoint||window.GSSVisionAPI?.DEFAULT_ENDPOINT||'';
+    endpointField.oninput=()=>{S.visionEndpoint=endpointField.value.trim();};
+    const quick=$('[data-ai-quick-files]',el);
+    quick.onchange=async()=>{
+      const input=[...quick.files];if(!input.length)return;
+      if(input.length>5){toast('Selecciona máximo cinco fotos en la misma captura.',6000);return;}
+      quick.disabled=true;
+      const newIds=[];
+      try {
+        for(const f of input){
+          if(S.project?.id!==p.id)throw Error('El proyecto activo cambió. Vuelve a Fotos.');
+          const b=await resizeImage(f,1600);
+          if(!b)throw Error('Una foto no pudo procesarse.');
+          const id=Mo.uid();
+          await St.savePhoto({id,projectId:p.id,cat:'site',blob:b,createdAt:Date.now()});
+          newIds.push(id);
+        }
+        if(S.project?.id!==p.id)return;
+        await loadPhotos(p.id);
+        S.visionSelections.set(p.id,newIds);
+        tabFotos(el);
+        toast(newIds.length+' foto(s) guardadas y seleccionadas para AI Vision.',5000);
+      }catch(err){toast(err.message||'No se pudieron guardar las imágenes.',6000);
+        if(S.project?.id===p.id){await loadPhotos(p.id);tabFotos(el);}
+      } finally{quick.disabled=false;}
+    };
+    const analyzeButton=$('[data-a="vision-analyze"]',el);
+    analyzeButton.onclick=async()=>{
+      const ids=selection(),status=$('#vision-live-status',el);
+      if(!ids.length||ids.length>5){toast('Selecciona de 1 a 5 fotos de este proyecto.',6000);return;}
+      if(!$('#vision-authorized',el)?.checked){toast('Confirma la autorización de las fotografías.',6000);return;}
+      const photos=ids.map(id=>S.photos.find(x=>x.id===id));
+      if(photos.some(x=>!x||x.projectId!==p.id)){toast('Fotos de evidencia incorrectas para este proyecto.',6000);return;}
+      if(!window.GSSVisionAPI){toast('Módulo de AI Vision no cargado.',6000);return;}
+      analyzeButton.disabled=true;status.textContent='Gemini está analizando las '+ids.length+' fotos de este proyecto…';
+      const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),90000);
+      try{
+        const analysis=await GSSVisionAPI.analyze({
+          projectId:p.id,photos,token:S.visionToken,
+          url:S.visionEndpoint||GSSVisionAPI.DEFAULT_ENDPOINT,signal:ctrl.signal
+        });
+        if(S.project?.id!==p.id)throw Error('El proyecto activo cambió: no se guardó el resultado.');
+        const current=await St.listPhotos(p.id);
+        if(!ids.every(id=>current.some(x=>x.id===id)))throw Error('Cambió la evidencia fotográfica durante el análisis.');
+        p.aiVision=analysis;
+        await St.saveProject(p);
+        S.visionSelections.set(p.id,ids);
+        status.textContent='Análisis guardado para revisión humana; el modelo 3D no se modificó.';
+        toast('AI Vision guardado en este proyecto. Abre Studio.',5500);
+        tabFotos(el);
+      }catch(err){
+        status.textContent=err.message||'No se pudo completar el análisis.';
+        toast(status.textContent,6500);
+      }finally{clearTimeout(timer);analyzeButton.disabled=false;}
+    };
+
+    // Keep a pasted report only in memory while photos are added or the tab rerenders.
+    // Drafts are keyed by project to prevent one house appearing in another.
+    const visionField=$('#vision-json',el);
+    visionField.value=S.visionDrafts.get(p.id)||'';
+    visionField.oninput=()=>S.visionDrafts.set(p.id,visionField.value);
+    const visionImport=$('[data-a="vision-import"]',el);
+    if(visionImport)visionImport.onclick=async()=>{
+      const selected=$$('[data-ai-photo]:checked',el).map(x=>x.value);
+      if(!selected.length){toast(S.photos.length?'Marca las fotos de este proyecto utilizadas en Gemini.':'Primero sube las fotografías de esta propiedad más abajo.',6000);return;}
+      if(!$('#vision-authorized',el)?.checked){toast('Confirma autorización y propiedad antes de guardar el análisis.',5000);return;}
+      const raw=$('#vision-json',el)?.value||'';
+      try{
+        if(!window.GSSVision)throw Error('Módulo AI Vision no disponible.');
+        if(!selected.every(id=>S.photos.some(x=>x.id===id&&x.projectId===p.id)))throw Error('Las fotos no pertenecen a este proyecto.');
+        const analysis=GSSVision.normalize(raw,p.id,selected);
+        if(S.project?.id!==p.id)throw Error('Cambió el proyecto activo; vuelve a abrir Fotos.');
+        p.aiVision=analysis;
+        await St.saveProject(p);
+        S.visionDrafts.delete(p.id);
+        toast('Análisis guardado para revisión; las medidas no cambian.',5000);
+        tabFotos(el);
+      }catch(err){toast(err.message||'No se pudo guardar el análisis.',6000);}
+    };
+    $$('input[data-guide-cat]',el).forEach(i=>i.onchange=async()=>{
+      const files=[...i.files];if(!files.length)return;
+      const own=p.id;
+      toast('Guardando '+files.length+' foto(s)…');
+      for(const f of files){
+        try{
+          if(S.project?.id!==own)return;
+          const b=await resizeImage(f,1600);
+          await St.savePhoto({id:Mo.uid(),projectId:own,cat:i.dataset.guideCat,blob:b,createdAt:Date.now()});
+        }catch(err){toast('Una fotografía no se pudo guardar');}
+      }
+      if(S.project?.id!==own)return;
+      await loadPhotos(own);
+      if(S.project?.id===own)tabFotos(el);
+    });
     $$('input[data-cat]', el).forEach(i => i.onchange = async () => {
       const files = [...i.files]; if (!files.length) return; toast('Guardando ' + files.length + ' foto(s)…');
-      for (const f of files) { try { const b = await resizeImage(f, 1600); await St.savePhoto({ id: Mo.uid(), projectId: S.project.id, cat: i.dataset.cat, blob: b, createdAt: Date.now() }); } catch (e) { toast('Una foto no se pudo leer'); } }
-      await loadPhotos(); tabFotos(el);
+      for (const f of files) { try { const b = await resizeImage(f, 1600); await St.savePhoto({ id: Mo.uid(), projectId: p.id, cat: i.dataset.cat, blob: b, createdAt: Date.now() }); } catch (e) { toast('Una foto no se pudo leer'); } }
+      if(S.project?.id!==p.id)return;
+      await loadPhotos(p.id); if(S.project?.id===p.id)tabFotos(el);
     });
     $$('[data-del]', el).forEach(b => b.onclick = async () => {const phid=b.dataset.del;if(S.project.approvedDrawing?.photoId===phid){alert('Esta foto es la referencia de un plano aprobado. Para retirarla, genera primero una nueva revisión con otra fotografía.');return;}if(!confirm('¿Eliminar esta fotografía del proyecto?'))return;if(S.project.drawingDraft?.sourcePhotoId===phid){S.project.drawingDraft.sourcePhotoId='';saveSoon();}await St.deletePhoto(phid);await loadPhotos();tabFotos(el);});
     $$('[data-trace]',el).forEach(b=>b.onclick=()=>{window.GSSPhotoEditor.initDraft(S.project).sourcePhotoId=b.dataset.trace;saveSoon();location.hash='#/p/'+S.project.id+'/editor';});
@@ -450,6 +654,7 @@
         <div class="field" style="margin-top:8px"><label for="qn">Número de cotización / job</label><input id="qn" value="${esc(p.quote.number)}" placeholder="Q-${new Date().getFullYear()}-001"></div>
         <button class="btn block" data-a="qpdf">Descargar cotización PDF</button>
       </div>`;
+    if(FS)el.insertAdjacentHTML('beforeend','<a class="btn block fs-price-next" href="#/p/'+p.id+'/entregar">Continuar a entregables →</a>');
     const upd = () => { const q2 = Mo.quoteTotals(p); $('#scr', el).textContent = Mo.money(q2.screens); $('#tot', el).textContent = Mo.money(q2.total); $('.row .l', $$('.card', el)[1]).textContent = q2.sqft.toFixed(1) + ' pie² × ' + Mo.money(q2.rate); saveSoon(); };
     $$('[data-rate]', el).forEach(b => b.onclick = () => { $$('[data-rate]', el).forEach(x => x.setAttribute('aria-pressed', String(x === b))); if (b.dataset.rate === 'otro') { $('#otroBox', el).classList.remove('hidden'); $('#otro', el).focus(); p.quote.rate = parseFloat($('#otro', el).value) || 0; } else { $('#otroBox', el).classList.add('hidden'); p.quote.rate = +b.dataset.rate; } upd(); });
     $('#otro', el).oninput = e => { p.quote.rate = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0; upd(); };
@@ -492,7 +697,7 @@
     } catch (e) { console.error(e); toast('No se pudo generar el plano'); }
     busy(el, false);
   }
-  function shareURL(withPrice) { const p = JSON.parse(JSON.stringify(S.project)); p._company = company(); delete p.geo; if (!withPrice) { p.quote.rate = 0; p.quote.extras = []; p.quote.hidePrice = true; } return location.href.split('#')[0] + '#/cliente/' + Mo.encodeShare(p); }
+  function shareURL(withPrice) { const p = JSON.parse(JSON.stringify(S.project)); p._company = company(); delete p.geo; delete p.aiVision; delete p.porchTrace; if (!withPrice) { p.quote.rate = 0; p.quote.extras = []; p.quote.hidePrice = true; } return location.href.split('#')[0] + '#/cliente/' + Mo.encodeShare(p); }
   function tabEntregar(el) {
     const p = S.project;
     el.innerHTML = `
@@ -508,6 +713,7 @@
         <p class="lead" style="font-size:13px;margin:8px 0 0">El link lleva el modelo y la cotización, sin fotos ni notas internas.</p></div>`}
       <div class="card"><p class="cap">Pasar el proyecto a otro dispositivo</p>
         <button class="btn sec block" data-a="export">Exportar proyecto con fotos (.json)</button></div>`;
+    if(FS)el.insertAdjacentHTML('afterbegin',FS.deliverables(p,S.photos,p.kind!=='field'||Mo.hasApprovedGeometry(p),Number(p.quote?.rate)>0));
     const btnPlan=$('[data-a="plan"]',el);if(btnPlan)btnPlan.onclick = () => makePlan(el);
     const btnQuote=$('[data-a="quote"]',el);if(btnQuote)btnQuote.onclick = () => makeQuote(el);
     if($('#wp',el))$('#wp', el).onclick = e => e.currentTarget.setAttribute('aria-pressed', String(e.currentTarget.getAttribute('aria-pressed') !== 'true'));
