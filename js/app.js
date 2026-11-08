@@ -210,7 +210,7 @@
     if (tab === 'editor') { return tabEditor(el); }
     if (tab === 'roof') { return tabRoof(el); }
     if (tab === 'parts') { return tabParts(el); }
-    ({ datos: tabDatos, fotos: tabFotos, aerea: tabAerea, analisis: tabAnalisis, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
+    ({ datos: tabDatos, fotos: tabFotos, aerea: tabAerea, analisis: tabAnalisis, disenador: tabDisenador, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
     if(FS && tab!=='studio' && ['medidas','3d'].includes(tab))el.insertAdjacentHTML('afterbegin',FS.more(p,tab));
     window.scrollTo(0, 0);
   }
@@ -276,6 +276,14 @@
   function tabAnalisis(el){
     el.innerHTML=FS?FS.analysis(S.project,S.photos):'<div class="card">Consulta el análisis en Fotos.</div>';
   }
+  function tabDisenador(el){
+    if(!window.GSSAiDesigner){el.innerHTML='<div class="card">El diseñador IA no está disponible.</div>';return;}
+    window.GSSAiDesigner.render({
+      project:S.project,photos:S.photos,host:el,
+      save:()=>St.saveProject(S.project).catch(err=>{toast('No se pudo guardar el brief del diseño.');throw err;}),notify:toast,
+      navigate:tab=>{location.hash='#/p/'+encodeURIComponent(S.project.id)+'/'+tab;}
+    });
+  }
   function tabDatos(el) {
     const p = S.project, m = mapLinks(p);
     el.innerHTML = `
@@ -337,7 +345,7 @@
   function visionCard(p) {
     const a=p.aiVision, valid=a&&window.GSSVision&&GSSVision.belongsTo(a,p.id,S.photos);
     const initial=S.visionSelections.get(p.id);
-    const picked=initial|| (S.photos.length<=5 ? S.photos.map(ph=>ph.id) : []);
+    const picked=initial|| (window.GSSAiDesigner?.recommendedPhotos(p.id,S.photos)|| (S.photos.length<=5?S.photos.map(ph=>ph.id):[]));
     const list=(title,items)=>items?.length?'<div class="pad"></div><b>'+esc(title)+'</b><ul>'+items.slice(0,12).map(v=>'<li>'+esc(v)+'</li>').join('')+'</ul>':'';
     const result=a?'<div class="card" style="background:var(--surface,#f5f5f7)"><div class="cap">AI ANALYSIS · PENDING HUMAN REVIEW</div>'+
       '<p class="lead">Modelo: '+esc(a.model)+' · '+(valid?'Evidencia vinculada al proyecto':'⚠ Faltan fotos de evidencia')+'</p>'+

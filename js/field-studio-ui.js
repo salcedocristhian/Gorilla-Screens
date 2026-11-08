@@ -14,6 +14,7 @@
   fotos:['Fotos del sitio','Captura el lugar donde construiremos el screen.'],
   aerea:['Vista aérea','Ubica el área de construcción alrededor de la casa.'],
   analisis:['Análisis del sitio','La IA observa las condiciones; tú verificas.'],
+  disenador:['Diseñador IA','Decidimos qué construir antes de modelarlo.'],
   studio:['Diseña tu screen','La estructura propuesta es nuestro producto.'],
   medidas:['Medidas y edición','Verifica las dimensiones antes de fabricar.'],
   '3d':['Visualización 3D','Explora tu proyecto antes de presentarlo.'],
@@ -25,7 +26,7 @@
  };
  const stage=tab=>Math.max(0,stages.findIndex(x=>x[0]===tab))>=0&&stages.some(x=>x[0]===tab)?
   stages.findIndex(x=>x[0]===tab):
-  ['medidas','editor','roof','parts','3d'].includes(tab)?4:0;
+  ['disenador','medidas','editor','roof','parts','3d'].includes(tab)?4:0;
  function header(p,tab){
   const n=stage(tab),info=names[tab]||names.datos;
   return '<section class="fs-journey" aria-label="Flujo de visita">'+
@@ -143,7 +144,7 @@
       list('Verificar en campo',a.findings?.measurementsToVerify):
      '<div class="fs-ai-empty">Analiza las fotos guardadas para obtener un resumen del sitio. El resultado NO genera medidas de fabricación.</div>')+
    '<a class="btn sec block" href="'+path(p,'fotos')+'">'+(ok?'Revisar fotos y análisis':'Ir a analizar fotografías')+'</a>'+
-   '<a class="btn block fs-next" href="'+path(p,'studio')+'">Abrir diseño del screen →</a>'+
+   '<a class="btn block fs-next" href="'+path(p,'disenador')+'">Continuar con el diseñador IA →</a>'+
    '<p class="fs-support fs-consent-note">Las medidas, anclajes y selecciones constructivas siguen sujetos a verificación y aprobación humana.</p></section>';
  }
  function studio(p,photos){
