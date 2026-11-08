@@ -1,0 +1,43 @@
+import vm from 'node:vm';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const ctx={window:{},Math,Date,Number,String,Array,JSON};
+vm.createContext(ctx);
+for(const file of ['porch-trace.js','porch-infill-3d.js']){
+ vm.runInContext(fs.readFileSync(new URL('../js/'+file,import.meta.url),'utf8'),ctx);
+}
+const C=ctx.window.GSSPorchInfill3D;
+const arch={id:'arch-2',label:'Arco central',left:285,right:550,top:215,spring:430,bottom:860,crown:420};
+const project={id:'house-a',studioV17:{roof:'mansard',width:30,depth:10,height:9,finish:'bronze',approvedOrder:{signature:'untouched'}},
+ porchTrace:{projectId:'house-a',photoId:'photo-a',arches:[arch],conceptDoorArchId:'arch-2',verified:true}};
+const pJSON=JSON.stringify(project);
+const owned=[{id:'photo-a',projectId:'house-a',url:'blob:house-a'}];
+const model=C.fromTrace(project,owned);
+assert.equal(model.projectId,'house-a');
+assert.equal(model.photoId,'photo-a');
+assert.equal(model.arches.length,1);
+assert.equal(model.doorArchId,'arch-2');
+assert.equal(model.finish,'bronze');
+assert.equal(model.roofAdded,false,'Never create another roof over an existing covered porch');
+assert.equal(model.takeoffEligible,false,'Unmeasured tracings are not material quantities');
+assert.equal(model.approvalEligible,false);
+assert.equal(model.dimensionsVerified,false,'Never inherit an unrelated V17 verified flag');
+assert.equal(model.depthVerified,false);
+assert.equal(JSON.stringify(project),pJSON,'Visualization cannot mutate design values');
+const pts=Array.from(C.outline(model.arches[0],1.5),p=>Array.from(p));
+assert.equal(pts.length,35);
+assert.ok(pts[0][0]<pts.at(-1)[0]);
+assert.equal(pts[0][1],pts.at(-1)[1]);
+assert.ok(pts[17][1]>pts[0][1],'Crown must be above opening base');
+assert.equal(C.fromTrace(project,[{id:'photo-a',projectId:'house-b',url:'blob:wrong'}]),null);
+assert.equal(C.fromTrace({...project,id:'house-b'},owned),null);
+assert.equal(C.fromTrace({...project,porchTrace:{...project.porchTrace,arches:[]}},owned),null);
+const mismatch={...project,porchTrace:{...project.porchTrace,conceptDoorArchId:'arch-does-not-exist'}};
+assert.equal(C.fromTrace(mismatch,owned).doorArchId,'');
+const studio=fs.readFileSync(new URL('../js/v17-studio.js',import.meta.url),'utf8');
+assert.ok(studio.includes("window.GSSPorchTrace?.unmount?.()"),'Stop concept renderer when switching tabs');
+const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+assert.ok(html.indexOf('porch-trace.js')<html.indexOf('porch-infill-3d.js'));
+const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+assert.match(sw,/js\/porch-infill-3d\.js/);
+console.log('PASS Porch Infill 3D concept: own photo, exact traced contour, door-only concept, no roof or quantity mutation');
