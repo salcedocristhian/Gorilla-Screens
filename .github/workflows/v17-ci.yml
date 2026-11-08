@@ -10,6 +10,7 @@ on:
       - feature/porch-photo-alignment-qa-20261107
       - feature/field-studio-ios-ux-20261107
       - feature/ai-designer-conversation-v1-20261107
+      - feature/seller-flow-one-app-20261107
   pull_request:
     branches:
       - main
@@ -44,6 +45,8 @@ jobs:
         run: node tests/test_field_studio_ui.mjs
       - name: AI Designer questions, separate house context and product, measurement safety
         run: node tests/test_ai_designer.mjs
+      - name: Single-visit UX and project-evidence progress invariants
+        run: node tests/test_visit_flow.mjs
       - name: Single-capture API client
         run: node tests/test_vision_api.mjs
       - name: Authenticated Gemini bridge security
