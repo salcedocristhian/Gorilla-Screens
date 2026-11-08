@@ -210,7 +210,7 @@
     if (tab === 'editor') { return tabEditor(el); }
     if (tab === 'roof') { return tabRoof(el); }
     if (tab === 'parts') { return tabParts(el); }
-    ({ datos: tabDatos, fotos: tabFotos, aerea: tabAerea, analisis: tabAnalisis, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
+    ({ datos: tabDatos, fotos: tabFotos, aerea: tabAerea, analisis: tabAnalisis, disenador: tabDisenador, medidas: p.kind==='field'?tabFieldMeasures:tabMedidas, '3d': tab3D, studio: tabStudio, precio: tabPrecio, entregar: tabEntregar }[tab] || tabDatos)(el);
     if(FS && tab!=='studio' && ['medidas','3d'].includes(tab))el.insertAdjacentHTML('afterbegin',FS.more(p,tab));
     window.scrollTo(0, 0);
   }
@@ -275,6 +275,13 @@
   }
   function tabAnalisis(el){
     el.innerHTML=FS?FS.analysis(S.project,S.photos):'<div class="card">Consulta el análisis en Fotos.</div>';
+  }
+  function tabDisenador(el){
+    if(!window.GSSAiDesigner){el.innerHTML='<div class="card">El diseñador IA no está disponible.</div>';return;}
+    window.GSSAiDesigner.render({
+      project:S.project,photos:S.photos,host:el,save:saveSoon,notify:toast,
+      navigate:tab=>{location.hash='#/p/'+encodeURIComponent(S.project.id)+'/'+tab;}
+    });
   }
   function tabDatos(el) {
     const p = S.project, m = mapLinks(p);
